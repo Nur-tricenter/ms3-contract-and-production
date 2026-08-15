@@ -37,7 +37,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseDefaultExceptionHandler();
-app.UseHttpsRedirection();
+// HTTP only: sin UseHttpsRedirection() porque en Docker no hay certificado HTTPS.
 app.UseFastEndpoints();
 
 app.Run();
