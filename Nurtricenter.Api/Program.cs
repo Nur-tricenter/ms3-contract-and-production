@@ -41,3 +41,5 @@ app.UseDefaultExceptionHandler();
 app.UseFastEndpoints();
 
 app.Run();
+
+public partial class Program { }
