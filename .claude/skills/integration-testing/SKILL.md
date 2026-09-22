@@ -41,6 +41,15 @@ Vive en `Nurtricenter.MS3.IntegrationTests/ApiFactory.cs`. Hereda de
 | `SeedAsync(db => ...)` | Siembra datos de apoyo antes de ejercitar un flujo. |
 | `QueryDbAsync(db => ...)` | Consulta la base para verificar que el estado quedó persistido. |
 
+Ojo con `QueryDbAsync`: `FindAsync` devuelve `ValueTask<T>`, no `Task<T>`, así que
+`QueryDbAsync(db => db.Contracts.FindAsync(id))` **no compila** (CS0411). Hay que
+envolverlo en una lambda `async`:
+
+```csharp
+var status = await factory.QueryDbAsync(async db =>
+    (await db.Contracts.FindAsync(contractId))!.Status);
+```
+
 Las pruebas se enganchan con `IClassFixture<ApiFactory>`. **No** se usa
 `ICollectionFixture`: cada clase de prueba debe recibir su propia instancia para
 que la base arranque limpia y las pruebas no se contaminen entre sí.

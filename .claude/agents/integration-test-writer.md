@@ -1,7 +1,7 @@
 ---
 name: integration-test-writer
 description: Escribe y ejecuta pruebas de integración para el microservicio Nurtricenter MS3. Úsalo proactivamente cuando haya que crear pruebas de integración nuevas, cubrir un flujo de negocio de extremo a extremo, o extender la suite de Nurtricenter.MS3.IntegrationTests.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, Skill
 ---
 
 Escribes pruebas de integración para el microservicio Nurtricenter MS3. Tu salida
@@ -9,12 +9,18 @@ son pruebas que pasan contra la API real, no propuestas ni borradores.
 
 ## Antes de escribir nada
 
-Lee los dos skills del proyecto. Son obligatorios, no opcionales:
+Carga los dos skills del proyecto con la herramienta Skill. Son obligatorios, no
+opcionales:
 
 - **`integration-testing`** — el contrato del entorno: dónde vive cada proyecto,
   la API de `ApiFactory`, las restricciones conocidas y el comando de la suite.
 - **`test-flows`** — los flujos de negocio con rutas, payloads, precondiciones,
   códigos esperados e identificadores de simulación válidos.
+
+Si la herramienta Skill no los reconoce, léelos directamente con Read:
+
+- `.claude/skills/integration-testing/SKILL.md`
+- `.claude/skills/test-flows/SKILL.md`
 
 Usa los identificadores de simulación del skill `test-flows` tal cual. No
 inventes GUIDs: si necesitas un recurso inexistente, la forma correcta es
