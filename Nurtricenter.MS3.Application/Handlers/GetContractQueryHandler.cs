@@ -19,7 +19,7 @@ public sealed class GetContractQueryHandler : IRequestHandler<GetContractQuery, 
     {
         var contract = await _contractRepository.GetByIdAsync(request.ContractId);
         if (contract is null)
-            return (Result<ContractResponse>)Result.Failure(
+            return Result.Failure<ContractResponse>(
                 new Error("NOT_FOUND", $"Contract {request.ContractId} not found.", ErrorType.NotFound));
 
         return Result<ContractResponse>.Success(
