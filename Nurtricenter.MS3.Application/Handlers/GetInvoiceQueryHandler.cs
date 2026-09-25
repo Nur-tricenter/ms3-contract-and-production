@@ -22,7 +22,7 @@ public sealed class GetInvoiceQueryHandler : IRequestHandler<GetInvoiceQuery, Re
     {
         var contract = await _contractRepository.GetByInvoiceNumberAsync(request.InvoiceNumber, cancellationToken);
         if (contract?.Invoice is null)
-            return (Result<InvoiceResponse>)Result.Failure(
+            return Result.Failure<InvoiceResponse>(
                 new Error("NOT_FOUND", $"Invoice '{request.InvoiceNumber}' not found.", ErrorType.NotFound));
 
         var invoice = contract.Invoice;

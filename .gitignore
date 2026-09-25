@@ -58,4 +58,7 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
-got
+
+#doc
+CLAUDE.md
+HAPPY_PATH.md

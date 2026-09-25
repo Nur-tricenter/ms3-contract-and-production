@@ -24,7 +24,7 @@ public sealed class ConsolidateDailyOrderCommandHandler : IRequestHandler<Consol
     {
         var existing = await _dailyProductionOrderRepository.GetByProductionDateAsync(request.ProductionDate, cancellationToken);
         if (existing is not null)
-            return (Result<DailyProductionOrder>)Result.Failure(
+            return Result.Failure<DailyProductionOrder>(
                 new Error("DUPLICATE_ORDER", $"A production order already exists for {request.ProductionDate:yyyy-MM-dd}.", ErrorType.Conflict));
 
         var order = DailyProductionOrder.ConsolidateOrder(request.ProductionDate, request.Items);
