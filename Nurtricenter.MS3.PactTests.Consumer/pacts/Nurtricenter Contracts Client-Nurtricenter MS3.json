@@ -1,0 +1,146 @@
+{
+  "consumer": {
+    "name": "Nurtricenter Contracts Client"
+  },
+  "interactions": [
+    {
+      "description": "una solicitud para consultar un contrato existente",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "existe un contrato",
+          "params": {
+            "contractId": "370e00b7-5b88-4251-8be4-cad43bdfd2b9"
+          }
+        }
+      ],
+      "request": {
+        "headers": {
+          "Accept": [
+            "application/json"
+          ]
+        },
+        "method": "GET",
+        "path": "/api/v1/contracts/370e00b7-5b88-4251-8be4-cad43bdfd2b9"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "catalogPlanId": "10000000-0000-0000-0000-000000000001",
+            "createdAt": "2026-09-25T20:47:23.3130979Z",
+            "id": "370e00b7-5b88-4251-8be4-cad43bdfd2b9",
+            "patientId": "00000000-0000-0000-0000-000000000001",
+            "status": "PendingPayment"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json; charset=utf-8"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$.createdAt": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.status": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "una solicitud para crear un contrato con paciente y plan validos",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "el paciente y el plan existen"
+        }
+      ],
+      "request": {
+        "body": {
+          "content": {
+            "catalogPlanId": "10000000-0000-0000-0000-000000000001",
+            "patientId": "00000000-0000-0000-0000-000000000001"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/v1/contracts"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "catalogPlanId": "10000000-0000-0000-0000-000000000001",
+            "createdAt": "2026-09-25T20:47:23.22329Z",
+            "id": "0c3293ed-8427-4307-86fd-d9c4e52ddc91",
+            "patientId": "00000000-0000-0000-0000-000000000001",
+            "status": "PendingPayment"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json; charset=utf-8"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$.createdAt": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          }
+        },
+        "status": 201
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.27",
+      "models": "1.2.8"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "Nurtricenter MS3"
+  }
+}

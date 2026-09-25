@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.10.12217.157 stable
+VisualStudioVersion = 18.10.12217.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.Api", "Nurtricenter.Api\Nurtricenter.MS3.Api.csproj", "{028727B7-BF54-4586-943A-D0AFBF00DD0C}"
 EndProject
@@ -20,6 +20,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.Tests", "Nurtricenter.MS3.Tests\Nurtricenter.MS3.Tests.csproj", "{4466C878-A077-4A34-B5CD-10DC1CA6389D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.IntegrationTests", "Nurtricenter.MS3.IntegrationTests\Nurtricenter.MS3.IntegrationTests.csproj", "{A717B8F4-1561-407B-90CC-A358538E5975}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.PactTests.Consumer", "Nurtricenter.MS3.PactTests.Consumer\Nurtricenter.MS3.PactTests.Consumer.csproj", "{BA1B7D1B-6203-4095-8738-98B2BD6661E9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.PactTests.Provider", "Nurtricenter.MS3.PactTests.Provider\Nurtricenter.MS3.PactTests.Provider.csproj", "{A6743363-2260-44ED-922A-E7F6A45F7B1C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Nurtricenter.Api", "Nurtricenter.Api", "{B862F425-93CE-1520-3EC6-A52E6933FE4A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -103,6 +109,30 @@ Global
 		{A717B8F4-1561-407B-90CC-A358538E5975}.Release|x64.Build.0 = Release|Any CPU
 		{A717B8F4-1561-407B-90CC-A358538E5975}.Release|x86.ActiveCfg = Release|Any CPU
 		{A717B8F4-1561-407B-90CC-A358538E5975}.Release|x86.Build.0 = Release|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Debug|x64.Build.0 = Debug|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Debug|x86.Build.0 = Debug|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Release|x64.ActiveCfg = Release|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Release|x64.Build.0 = Release|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Release|x86.ActiveCfg = Release|Any CPU
+		{BA1B7D1B-6203-4095-8738-98B2BD6661E9}.Release|x86.Build.0 = Release|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Debug|x64.Build.0 = Debug|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Debug|x86.Build.0 = Debug|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x64.ActiveCfg = Release|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x64.Build.0 = Release|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x86.ActiveCfg = Release|Any CPU
+		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
