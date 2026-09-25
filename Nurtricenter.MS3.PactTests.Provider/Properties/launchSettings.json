@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Nurtricenter.MS3.PactTests.Provider": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:49293;http://localhost:49294"
+    }
+  }
+}
