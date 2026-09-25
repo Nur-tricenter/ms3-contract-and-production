@@ -29,7 +29,7 @@ public sealed class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymen
     {
         var contract = await _contractRepository.GetByIdAsync(request.ContractId);
         if (contract is null)
-            return (Result<PaymentResponse>)Result.Failure(
+            return Result.Failure<PaymentResponse>(
                 new Error("NOT_FOUND", $"Contract {request.ContractId} not found.", ErrorType.NotFound));
 
         var invoice = contract.ProcessPayment(request.Amount, request.InvoiceNumber);
