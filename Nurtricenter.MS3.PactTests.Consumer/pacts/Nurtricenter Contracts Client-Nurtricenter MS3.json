@@ -10,7 +10,7 @@
         {
           "name": "existe un contrato",
           "params": {
-            "contractId": "370e00b7-5b88-4251-8be4-cad43bdfd2b9"
+            "contractId": "3b0f4054-1b85-49e5-a974-3a2b9fb840fa"
           }
         }
       ],
@@ -21,14 +21,14 @@
           ]
         },
         "method": "GET",
-        "path": "/api/v1/contracts/370e00b7-5b88-4251-8be4-cad43bdfd2b9"
+        "path": "/api/v1/contracts/3b0f4054-1b85-49e5-a974-3a2b9fb840fa"
       },
       "response": {
         "body": {
           "content": {
             "catalogPlanId": "10000000-0000-0000-0000-000000000001",
-            "createdAt": "2026-09-25T20:47:23.3130979Z",
-            "id": "370e00b7-5b88-4251-8be4-cad43bdfd2b9",
+            "createdAt": "2026-09-25T21:14:23.5236686Z",
+            "id": "3b0f4054-1b85-49e5-a974-3a2b9fb840fa",
             "patientId": "00000000-0000-0000-0000-000000000001",
             "status": "PendingPayment"
           },
@@ -93,8 +93,8 @@
         "body": {
           "content": {
             "catalogPlanId": "10000000-0000-0000-0000-000000000001",
-            "createdAt": "2026-09-25T20:47:23.22329Z",
-            "id": "0c3293ed-8427-4307-86fd-d9c4e52ddc91",
+            "createdAt": "2026-09-25T21:14:23.0888574Z",
+            "id": "5ba5dba3-df42-4b56-9d04-08265d94e822",
             "patientId": "00000000-0000-0000-0000-000000000001",
             "status": "PendingPayment"
           },

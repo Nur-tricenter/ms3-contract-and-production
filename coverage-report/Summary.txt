@@ -1,0 +1,88 @@
+Summary
+  Generated on: 25/9/2026 - 17:12:22
+  Coverage date: 25/9/2026 - 17:11:33
+  Parser: Cobertura
+  Assemblies: 3
+  Classes: 62
+  Files: 45
+  Line coverage: 87.5%
+  Covered lines: 691
+  Uncovered lines: 98
+  Coverable lines: 789
+  Total lines: 1441
+  Branch coverage: 82.8% (111 of 134)
+  Covered branches: 111
+  Total branches: 134
+  Method coverage: 83.3% (211 of 253)
+  Full method coverage: 74.3% (188 of 253)
+  Covered methods: 211
+  Fully covered methods: 188
+  Total methods: 253
+
+Nurtricenter.MS3.Api                                                             0%
+  Program                                                                        0%
+
+Nurtricenter.MS3.Application                                                  91.4%
+  Nurtricenter.MS3.Application.Commands.ApproveQualityCommand                  100%
+  Nurtricenter.MS3.Application.Commands.CancelContractCommand                  100%
+  Nurtricenter.MS3.Application.Commands.ConsolidateDailyOrderCommand           100%
+  Nurtricenter.MS3.Application.Commands.CreateContractCommand                  100%
+  Nurtricenter.MS3.Application.Commands.GenerateLabelCommand                   100%
+  Nurtricenter.MS3.Application.Commands.ProcessControlChargeCommand            100%
+  Nurtricenter.MS3.Application.Commands.ProcessPaymentCommand                  100%
+  Nurtricenter.MS3.Application.Commands.RegisterAssemblyCommand                100%
+  Nurtricenter.MS3.Application.DependencyInjection                               0%
+  Nurtricenter.MS3.Application.Dtos.Billing.ControlChargeResponse              100%
+  Nurtricenter.MS3.Application.Dtos.Billing.InvoiceResponse                   87.5%
+  Nurtricenter.MS3.Application.Dtos.Billing.PaymentResponse                    100%
+  Nurtricenter.MS3.Application.Dtos.Billing.ProcessControlChargeRequest       66.6%
+  Nurtricenter.MS3.Application.Dtos.Billing.ProcessPaymentRequest              100%
+  Nurtricenter.MS3.Application.Dtos.Contracts.CancelContractRequest            100%
+  Nurtricenter.MS3.Application.Dtos.Contracts.ContractResponse                 100%
+  Nurtricenter.MS3.Application.Dtos.Contracts.CreateContractRequest            100%
+  Nurtricenter.MS3.Application.Dtos.Production.ApproveQualityRequest          66.6%
+  Nurtricenter.MS3.Application.Dtos.Production.CreatePackageRequest             60%
+  Nurtricenter.MS3.Application.Dtos.Production.DailyOrderResponse             83.3%
+  Nurtricenter.MS3.Application.Dtos.Production.GenerateLabelRequest            100%
+  Nurtricenter.MS3.Application.Dtos.Production.LabelResponse                    80%
+  Nurtricenter.MS3.Application.Dtos.Production.PackageResponse                  60%
+  Nurtricenter.MS3.Application.Dtos.Production.PackageValidationResult          80%
+  Nurtricenter.MS3.Application.Dtos.Production.PrintedData                     100%
+  Nurtricenter.MS3.Application.Dtos.Production.RecipeSummary                   100%
+  Nurtricenter.MS3.Application.Dtos.Production.RegisterAssemblyRequest          75%
+  Nurtricenter.MS3.Application.Dtos.Production.ValidationResponse               50%
+  Nurtricenter.MS3.Application.Handlers.ApproveQualityCommandHandler           100%
+  Nurtricenter.MS3.Application.Handlers.CancelContractCommandHandler           100%
+  Nurtricenter.MS3.Application.Handlers.ConsolidateDailyOrderCommandHandler   88.2%
+  Nurtricenter.MS3.Application.Handlers.CreateContractCommandHandler           100%
+  Nurtricenter.MS3.Application.Handlers.GenerateLabelCommandHandler            100%
+  Nurtricenter.MS3.Application.Handlers.GetContractQueryHandler               83.3%
+  Nurtricenter.MS3.Application.Handlers.GetDailyOrderQueryHandler             95.4%
+  Nurtricenter.MS3.Application.Handlers.GetInvoiceQueryHandler                  90%
+  Nurtricenter.MS3.Application.Handlers.ProcessControlChargeCommandHandler    90.4%
+  Nurtricenter.MS3.Application.Handlers.ProcessPaymentCommandHandler          93.3%
+  Nurtricenter.MS3.Application.Handlers.RegisterAssemblyCommandHandler         100%
+  Nurtricenter.MS3.Application.Queries.GetContractQuery                        100%
+  Nurtricenter.MS3.Application.Queries.GetDailyOrderQuery                      100%
+  Nurtricenter.MS3.Application.Queries.GetInvoiceQuery                         100%
+  Nurtricenter.MS3.Application.Simulations.Models.SimActiveCalendar           55.5%
+  Nurtricenter.MS3.Application.Simulations.Models.SimMealBlock                 100%
+  Nurtricenter.MS3.Application.Simulations.Models.SimPatient                   100%
+  Nurtricenter.MS3.Application.Simulations.Models.SimPlan                      100%
+  Nurtricenter.MS3.Application.Simulations.Models.SimPlanStructure             100%
+  Nurtricenter.MS3.Application.Simulations.SimulationDataService               100%
+
+Nurtricenter.MS3.Core                                                           89%
+  Nurtricenter.MS3.Core.Aggregates.Contract                                   97.5%
+  Nurtricenter.MS3.Core.Aggregates.ControlCharge                              96.1%
+  Nurtricenter.MS3.Core.Aggregates.DailyProductionOrder                       96.5%
+  Nurtricenter.MS3.Core.Aggregates.Package                                      98%
+  Nurtricenter.MS3.Core.Common.ValueObject                                    47.6%
+  Nurtricenter.MS3.Core.DomainEvents.ContractActivatedDomainEvent               40%
+  Nurtricenter.MS3.Core.DomainEvents.ContractCanceledDomainEvent                40%
+  Nurtricenter.MS3.Core.DomainEvents.ContractCreatedDomainEvent                 40%
+  Nurtricenter.MS3.Core.Entities.Invoice                                        95%
+  Nurtricenter.MS3.Core.Simulations.OutgoingIntegrationEvent                  93.7%
+  Nurtricenter.MS3.Core.ValueObjects.Label                                    85.7%
+  Nurtricenter.MS3.Core.ValueObjects.ProductionItem                           95.2%
+  Nurtricenter.MS3.Core.ValueObjects.QualityValidation                        95.6%
