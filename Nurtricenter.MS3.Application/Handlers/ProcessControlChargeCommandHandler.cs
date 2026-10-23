@@ -29,7 +29,7 @@ public sealed class ProcessControlChargeCommandHandler : IRequestHandler<Process
         // MS3 checks internally if patient has an active catering contract
         var existingContract = await _contractRepository.GetByPatientIdAsync(request.PatientId, cancellationToken);
         if (existingContract is { Status: Core.Enums.ContractStatus.Active })
-            return (Result<ControlChargeResponse>)Result<ControlChargeResponse>.Failure(
+            return Result.Failure<ControlChargeResponse>(
                 new Error("ACTIVE_CONTRACT", "Patient has an active catering contract. Control charge not applicable.", ErrorType.Conflict));
 
         var controlCharge = ControlCharge.ProcessControlCharge(

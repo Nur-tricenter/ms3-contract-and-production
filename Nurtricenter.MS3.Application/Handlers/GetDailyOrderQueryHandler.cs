@@ -30,7 +30,7 @@ public sealed class GetDailyOrderQueryHandler : IRequestHandler<GetDailyOrderQue
         // Simulate MS4: get active calendars for the date
         var calendars = _sim.GetActiveCalendars(request.ProductionDate);
         if (calendars.Count == 0)
-            return (Result<DailyOrderResponse>)Result.Failure(
+            return Result.Failure<DailyOrderResponse>(
                 new Error("NO_CALENDARS", $"No active calendars found for {request.ProductionDate:yyyy-MM-dd}.", ErrorType.NotFound));
 
         // Simulate MS2: get plan structures for all plan IDs

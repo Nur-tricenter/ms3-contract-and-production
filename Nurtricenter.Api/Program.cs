@@ -20,7 +20,7 @@ builder.Services.SwaggerDocument(o =>
     };
 });
 
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
@@ -41,3 +41,5 @@ app.UseDefaultExceptionHandler();
 app.UseFastEndpoints();
 
 app.Run();
+
+public partial class Program { }
