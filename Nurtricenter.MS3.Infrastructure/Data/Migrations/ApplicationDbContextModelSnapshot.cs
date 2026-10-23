@@ -143,6 +143,9 @@ namespace Nurtricenter.MS3.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -159,7 +162,87 @@ namespace Nurtricenter.MS3.Infrastructure.Data.Migrations
 
                     b.HasIndex("EventType");
 
+                    b.HasIndex("Status");
+
                     b.ToTable("OutgoingIntegrationEvents", (string)null);
+                });
+
+            modelBuilder.Entity("Nurtricenter.MS3.Infrastructure.Data.ReadModels.CatalogPlan", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DurationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("MealsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TotalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PlanId");
+
+                    b.ToTable("CatalogPlans", (string)null);
+                });
+
+            modelBuilder.Entity("Nurtricenter.MS3.Infrastructure.Data.ReadModels.CatalogRecipe", b =>
+                {
+                    b.Property<Guid>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Instructions")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RecipeId");
+
+                    b.ToTable("CatalogRecipes", (string)null);
+                });
+
+            modelBuilder.Entity("Nurtricenter.MS3.Infrastructure.Data.ReadModels.InboxMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("MessageCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("ProcessedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("ProcessedOn");
+
+                    b.ToTable("InboxMessages", (string)null);
                 });
 
             modelBuilder.Entity("Nurtricenter.MS3.Core.Aggregates.Contract", b =>

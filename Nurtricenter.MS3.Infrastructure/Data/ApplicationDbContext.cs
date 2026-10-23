@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Nurtricenter.MS3.Core.Aggregates;
 using Nurtricenter.MS3.Core.Entities;
 using Nurtricenter.MS3.Core.Simulations;
+using Nurtricenter.MS3.Infrastructure.Data.ReadModels;
 
 namespace Nurtricenter.MS3.Infrastructure.Data;
 
@@ -18,6 +19,9 @@ public sealed class ApplicationDbContext : DbContext
     public DbSet<DailyProductionOrder> DailyProductionOrders => Set<DailyProductionOrder>();
     public DbSet<Package> Packages => Set<Package>();
     public DbSet<OutgoingIntegrationEvent> OutgoingIntegrationEvents => Set<OutgoingIntegrationEvent>();
+    public DbSet<CatalogPlan> CatalogPlans => Set<CatalogPlan>();
+    public DbSet<CatalogRecipe> CatalogRecipes => Set<CatalogRecipe>();
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
