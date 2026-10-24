@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nurtricenter.MS3.Application.Simulations;
 using Nurtricenter.MS3.Infrastructure.Data;
+using Nurtricenter.MS3.Infrastructure.DeliveryCalendar;
 using Nurtricenter.MS3.Infrastructure.Messaging.Consumers;
 using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Catalog;
 
@@ -19,9 +20,16 @@ public static class MessagingExtensions
             return services;
 
         services.Remove(descriptor);
-        services.AddScoped<ISimulationService>(sp => new CatalogProjectionSimulationService(
-            CreateInner(sp, descriptor),
-            sp.GetRequiredService<ApplicationDbContext>()));
+        services.AddScoped<ISimulationService>(sp =>
+        {
+            var inner = CreateInner(sp, descriptor);
+            var deliveryCalendar = sp.GetRequiredService<IDeliveryCalendarClient>();
+
+            if (deliveryCalendar.IsEnabled)
+                inner = new DeliveryCalendarSimulationService(inner, deliveryCalendar);
+
+            return new CatalogProjectionSimulationService(inner, sp.GetRequiredService<ApplicationDbContext>());
+        });
 
         return services;
     }

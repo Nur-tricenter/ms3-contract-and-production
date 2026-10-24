@@ -63,4 +63,27 @@ public sealed class OutgoingIntegrationEventTests
 
         marcar.Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void MarkAsRejected_cambia_el_estado_sin_fecha_de_publicacion()
+    {
+        var evento = CrearEvento();
+
+        evento.MarkAsRejected();
+
+        evento.Status.Should().Be(OutgoingIntegrationEvent.RejectedStatus);
+        evento.IsPending.Should().BeFalse();
+        evento.PublishedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void MarkAsRejected_rechaza_un_evento_que_ya_no_esta_pendiente()
+    {
+        var evento = CrearEvento();
+        evento.MarkAsUnroutable();
+
+        var rechazar = () => evento.MarkAsRejected();
+
+        rechazar.Should().Throw<InvalidOperationException>();
+    }
 }

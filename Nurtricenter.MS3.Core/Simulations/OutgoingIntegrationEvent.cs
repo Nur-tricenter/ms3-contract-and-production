@@ -5,6 +5,7 @@ public sealed class OutgoingIntegrationEvent
     public const string PendingStatus = "Simulated";
     public const string PublishedStatus = "Published";
     public const string UnroutableStatus = "Unroutable";
+    public const string RejectedStatus = "Rejected";
 
     public Guid Id { get; private set; }
     public string EventType { get; private set; }
@@ -35,6 +36,14 @@ public sealed class OutgoingIntegrationEvent
 
         Status = PublishedStatus;
         PublishedAt = publishedAt;
+    }
+
+    public void MarkAsRejected()
+    {
+        if (!IsPending)
+            throw new InvalidOperationException($"Event {Id} is '{Status}' and cannot be marked as rejected.");
+
+        Status = RejectedStatus;
     }
 
     public void MarkAsUnroutable()

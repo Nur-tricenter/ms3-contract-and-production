@@ -37,6 +37,11 @@ Gestionar el ciclo completo desde que un paciente selecciona un plan hasta que s
 | MS3 → | MS4 | Evento: crear calendario post-pago | `GET /api/v1/sim/outgoing/CreateSchedule` |
 | MS3 → | MS5 | Evento: transferir paquetes validados | `GET /api/v1/sim/outgoing/TransferToLogistics` |
 
+En la plataforma del equipo, MS4 es real: MS3 llama a su `POST /schedule` y a su
+`GET /calendars/active-tomorrow` con la service account `ms3-service`, y MS2 y MS5
+se integran por RabbitMQ. Los endpoints `sim` siguen sirviendo en modo standalone.
+Detalle en [docs/INTEGRACION_PLATAFORMA.md](docs/INTEGRACION_PLATAFORMA.md).
+
 ### Tecnologías
 
 - .NET 8, FastEndpoints, MediatR, Entity Framework Core, PostgreSQL

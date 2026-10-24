@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Nurtricenter.MS3.Core.Simulations;
 using Nurtricenter.MS3.Infrastructure.Data;
-using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Contracting;
+using Nurtricenter.MS3.Infrastructure.DeliveryCalendar;
 using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Production;
 
 namespace Nurtricenter.MS3.Infrastructure.Messaging;
@@ -17,21 +17,22 @@ public sealed class OutboxRelay
     public const string CreateScheduleEventType = "CreateSchedule";
     public const string TransferToLogisticsEventType = "TransferToLogistics";
 
-    public const string ContractActivatedExchange = "contract-activated";
     public const string PackageValidatedExchange = "package-validated";
 
-    public static IReadOnlyList<string> PublishedExchanges { get; } = [ContractActivatedExchange, PackageValidatedExchange];
+    public static IReadOnlyList<string> PublishedExchanges { get; } = [PackageValidatedExchange];
 
     private static readonly JsonSerializerOptions PayloadOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly ApplicationDbContext _context;
     private readonly IExternalPublisher _publisher;
+    private readonly IDeliveryCalendarClient _deliveryCalendar;
     private readonly ILogger<OutboxRelay> _logger;
 
-    public OutboxRelay(ApplicationDbContext context, IExternalPublisher publisher, ILogger<OutboxRelay> logger)
+    public OutboxRelay(ApplicationDbContext context, IExternalPublisher publisher, IDeliveryCalendarClient deliveryCalendar, ILogger<OutboxRelay> logger)
     {
         _context = context;
         _publisher = publisher;
+        _deliveryCalendar = deliveryCalendar;
         _logger = logger;
     }
 
@@ -43,62 +44,72 @@ public sealed class OutboxRelay
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
 
-        var published = 0;
+        var delivered = 0;
 
         foreach (var outgoingEvent in pending)
         {
-            Task? publication;
             try
             {
-                publication = Publish(outgoingEvent);
+                var delivery = Deliver(outgoingEvent, cancellationToken);
+                if (delivery is null)
+                {
+                    await MarkAsUnroutableAsync(outgoingEvent, "it has no destination", cancellationToken);
+                    continue;
+                }
+
+                await delivery;
             }
             catch (JsonException exception)
             {
-                _logger.LogWarning(exception, "Event {EventId} ({EventType}) has a malformed payload and will not be published.", outgoingEvent.Id, outgoingEvent.EventType);
-                publication = null;
+                _logger.LogWarning(exception, "Event {EventId} ({EventType}) has a malformed payload.", outgoingEvent.Id, outgoingEvent.EventType);
+                await MarkAsUnroutableAsync(outgoingEvent, "its payload is malformed", cancellationToken);
+                continue;
             }
-
-            if (publication is null)
+            catch (DeliveryCalendarRejectedException exception)
             {
-                outgoingEvent.MarkAsUnroutable();
+                outgoingEvent.MarkAsRejected();
                 await _context.SaveChangesAsync(cancellationToken);
-                _logger.LogWarning("Event {EventId} ({EventType}) has no destination exchange; marked as {Status}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.Status);
+                _logger.LogWarning(exception, "Event {EventId} ({EventType}) was rejected by {TargetService}; marked as {Status}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.TargetService, outgoingEvent.Status);
                 continue;
             }
 
-            await publication;
-
             outgoingEvent.MarkAsPublished(DateTime.UtcNow);
             await _context.SaveChangesAsync(cancellationToken);
-            published++;
+            delivered++;
 
-            _logger.LogInformation("Published event {EventId} ({EventType}) to {TargetService}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.TargetService);
+            _logger.LogInformation("Delivered event {EventId} ({EventType}) to {TargetService}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.TargetService);
         }
 
-        return published;
+        return delivered;
     }
 
-    private Task? Publish(OutgoingIntegrationEvent outgoingEvent) => outgoingEvent.EventType switch
+    private async Task MarkAsUnroutableAsync(OutgoingIntegrationEvent outgoingEvent, string reason, CancellationToken cancellationToken)
     {
-        CreateScheduleEventType => _publisher.PublishAsync(ToContractActivated(outgoingEvent), ContractActivatedExchange, declareDestination: true),
+        outgoingEvent.MarkAsUnroutable();
+        await _context.SaveChangesAsync(cancellationToken);
+        _logger.LogWarning("Event {EventId} ({EventType}) marked as {Status} because {Reason}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.Status, reason);
+    }
+
+    private Task? Deliver(OutgoingIntegrationEvent outgoingEvent, CancellationToken cancellationToken) => outgoingEvent.EventType switch
+    {
+        CreateScheduleEventType when _deliveryCalendar.IsEnabled => _deliveryCalendar.ScheduleAsync(ToScheduleRequest(outgoingEvent), cancellationToken),
         TransferToLogisticsEventType => _publisher.PublishAsync(ToPackageValidated(outgoingEvent), PackageValidatedExchange, declareDestination: true),
         _ => null
     };
 
-    private static ContractActivated ToContractActivated(OutgoingIntegrationEvent outgoingEvent)
+    private static ScheduleDeliveriesRequest ToScheduleRequest(OutgoingIntegrationEvent outgoingEvent)
     {
         var payload = ReadPayload<CreateSchedulePayload>(outgoingEvent);
 
-        return new ContractActivated(outgoingEvent.Id.ToString(), Source)
-        {
-            Id = outgoingEvent.Id,
-            CreatedAt = AsUtc(outgoingEvent.CreatedAt),
-            ContractId = payload.ContractId,
-            PatientId = payload.PatientId,
-            CatalogPlanId = payload.CatalogPlanId,
-            InvoiceNumber = payload.InvoiceNumber,
-            TotalAmount = payload.TotalAmount
-        };
+        if (payload.DurationDays is null)
+            throw new DeliveryCalendarRejectedException(0, $"Event {outgoingEvent.Id} has no plan duration; MS4 needs it to build the calendar.");
+
+        return new ScheduleDeliveriesRequest(
+            payload.ContractId,
+            payload.PatientId,
+            payload.CatalogPlanId,
+            payload.DurationDays.Value,
+            payload.StartDate ?? DateOnly.FromDateTime(outgoingEvent.CreatedAt.AddDays(1)));
     }
 
     private static PackageValidated ToPackageValidated(OutgoingIntegrationEvent outgoingEvent)
@@ -128,7 +139,7 @@ public sealed class OutboxRelay
     private static DateTimeOffset AsUtc(DateTime value)
         => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
-    private sealed record CreateSchedulePayload(Guid ContractId, Guid PatientId, Guid CatalogPlanId, string InvoiceNumber, decimal TotalAmount);
+    private sealed record CreateSchedulePayload(Guid ContractId, Guid PatientId, Guid CatalogPlanId, int? DurationDays, DateOnly? StartDate);
 
     private sealed record TransferToLogisticsPayload(
         Guid PackageId,

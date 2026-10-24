@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nurtricenter.MS3.Application.Interfaces;
 using Nurtricenter.MS3.Infrastructure.Data;
+using Nurtricenter.MS3.Infrastructure.DeliveryCalendar;
 using Nurtricenter.MS3.Infrastructure.Repositories;
 
 namespace Nurtricenter.MS3.Infrastructure;
@@ -40,6 +41,8 @@ public static class DependencyInjection
 
         // Outgoing Events (simulation)
         services.AddScoped<IOutgoingEventRepository, OutgoingEventRepository>();
+
+        services.AddDeliveryCalendar(configuration);
 
         return services;
     }
