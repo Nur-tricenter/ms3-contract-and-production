@@ -183,7 +183,7 @@ classDiagram
 ### Estructura del Proyecto
 
 ```
-Nurtricenter/
+ms3-contract-and-production/
 ├── Nurtricenter.MS3.Core/           # Capa de Dominio
 │   ├── Aggregates/                   # Contract, ControlCharge, DailyProductionOrder, Package
 │   ├── Entities/                     # Invoice

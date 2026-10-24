@@ -27,22 +27,21 @@ que la capa de testing completa se implementó sobre él.
 
 ## 1. Unit tests — coverage ≥ 80% (cumplido)
 
-[`Nurtricenter.MS3.Tests`](Nurtricenter/Nurtricenter.MS3.Tests/) — **121
+[`Nurtricenter.MS3.Tests`](Nurtricenter.MS3.Tests/) — **121
 pruebas**, todas en verde:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
 # Passed! - Failed: 0, Passed: 121, Skipped: 0, Total: 121
 ```
 
 ### Reporte de coverage
 
 Generado con `coverlet.collector` + `reportgenerator`, commiteado en
-[`Nurtricenter/coverage-report/`](Nurtricenter/coverage-report/index.html)
+[`coverage-report/`](coverage-report/index.html)
 (abrí `index.html` para navegarlo por clase).
 
 ```bash
-cd Nurtricenter
 dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj \
   --collect:"XPlat Code Coverage" --results-directory Nurtricenter.MS3.Tests/TestResults
 
@@ -72,13 +71,13 @@ Sobre las 88 pruebas de la Tarea 1 (handlers con mocks de Moq + agregados de
 dominio sin mocks), se sumaron 33 pruebas nuevas para cerrar los huecos reales
 de cobertura en `Application`:
 
-- [`SimulationDataServiceTests.cs`](Nurtricenter/Nurtricenter.MS3.Tests/Application/SimulationDataServiceTests.cs) —
+- [`SimulationDataServiceTests.cs`](Nurtricenter.MS3.Tests/Application/SimulationDataServiceTests.cs) —
   la implementación real de `ISimulationService` nunca se ejercitaba
   directamente (los handlers la mockean vía interfaz). Cubre los cuatro
   métodos públicos contra los identificadores deterministas del skill
   `test-flows`, y de paso documenta a nivel unitario el mismo hallazgo de la
   Tarea 2: `GetActiveCalendars` no tiene ninguna entrada para Luis Ferrufino.
-- [`DtosTests.cs`](Nurtricenter/Nurtricenter.MS3.Tests/Application/DtosTests.cs) —
+- [`DtosTests.cs`](Nurtricenter.MS3.Tests/Application/DtosTests.cs) —
   los DTOs (records planos de request/response) no tenían ninguna prueba
   directa. Son pruebas deliberadamente simples (construir + verificar
   propiedades) porque no hay lógica que probar; su único propósito es cerrar
@@ -96,13 +95,13 @@ están agrupadas por flujo, un archivo por flujo:
 
 | Archivo | Flujo |
 |---|---|
-| [`ContractLifecycleTests.cs`](Nurtricenter/Nurtricenter.MS3.IntegrationTests/ContractLifecycleTests.cs) | Flujo 1 — ciclo de vida completo del contrato (contratar → pagar → cancelar) |
-| [`PackageLifecycleTests.cs`](Nurtricenter/Nurtricenter.MS3.IntegrationTests/PackageLifecycleTests.cs) | Flujo 2 — ciclo de vida completo del paquete (crear → ensamblar → etiquetar → validar) |
-| [`ContractErrorFlowTests.cs`](Nurtricenter/Nurtricenter.MS3.IntegrationTests/ContractErrorFlowTests.cs) | Flujo de error — 12 escenarios agrupados por los códigos que el sistema realmente devuelve |
-| [`HealthCheckTests.cs`](Nurtricenter/Nurtricenter.MS3.IntegrationTests/HealthCheckTests.cs) | Smoke tests de arranque |
+| [`ContractLifecycleTests.cs`](Nurtricenter.MS3.IntegrationTests/ContractLifecycleTests.cs) | Flujo 1 — ciclo de vida completo del contrato (contratar → pagar → cancelar) |
+| [`PackageLifecycleTests.cs`](Nurtricenter.MS3.IntegrationTests/PackageLifecycleTests.cs) | Flujo 2 — ciclo de vida completo del paquete (crear → ensamblar → etiquetar → validar) |
+| [`ContractErrorFlowTests.cs`](Nurtricenter.MS3.IntegrationTests/ContractErrorFlowTests.cs) | Flujo de error — 12 escenarios agrupados por los códigos que el sistema realmente devuelve |
+| [`HealthCheckTests.cs`](Nurtricenter.MS3.IntegrationTests/HealthCheckTests.cs) | Smoke tests de arranque |
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
+dotnet test Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
 # Passed! - Failed: 0, Passed: 18, Skipped: 0, Total: 18
 ```
 
@@ -112,8 +111,8 @@ usa **los tres**: integración en C# (arriba) más contract testing en
 verificadas de verdad contra la API real corriendo en un puerto TCP real):
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
+dotnet test Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
+dotnet test Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
 ```
 
 ## 3. Skills y reglas del proyecto usadas para el código generado
@@ -130,10 +129,10 @@ subagentes escritor/verificador, todo declarado en [`CLAUDE.md`](CLAUDE.md):
 ## 4. Código testeado
 
 El código bajo prueba es el microservicio completo en
-[`Nurtricenter/`](Nurtricenter/) — `Nurtricenter.MS3.Core` (dominio),
+[la raíz de este repositorio](./) — `Nurtricenter.MS3.Core` (dominio),
 `Nurtricenter.MS3.Application` (casos de uso), `Nurtricenter.MS3.Infrastructure`
 (persistencia) y `Nurtricenter.Api` (endpoints), tal como lo documenta el
-[`README.md`](Nurtricenter/README.md) del microservicio.
+[`README.md`](README.md) del microservicio.
 
 ## 5. Video de presentación individual
 
@@ -158,12 +157,11 @@ testing) y cómo se ejecuta (los comandos de este documento). Guion sugerido de
 ## 6. Cómo reproducir todo
 
 ```bash
-git clone https://github.com/JesusFerru/dipl-arqui-microservicios.git
-cd dipl-arqui-microservicios
-git checkout feat/proyecto-final-testing
+git clone https://github.com/JesusFerru/ms3-contract-and-production.git
+cd ms3-contract-and-production
 
-dotnet build Nurtricenter/Nurtricenter.MS3.sln
-dotnet test  Nurtricenter/Nurtricenter.MS3.sln
+dotnet build Nurtricenter.MS3.sln
+dotnet test  Nurtricenter.MS3.sln
 ```
 
 No requiere Docker ni PostgreSQL para ninguna capa de testing.
@@ -171,7 +169,7 @@ No requiere Docker ni PostgreSQL para ninguna capa de testing.
 ## Estado combinado de toda la suite
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 ```
@@ -194,7 +192,7 @@ ya documenta cada ruta, payload, precondición y código esperado que
 `ContractErrorFlowTests.cs`, `ContractLifecycleTests.cs` y
 `PackageLifecycleTests.cs` ejercitan — es la fuente de verdad para armar una
 colección sin tener que releer el código. Iría en una carpeta nueva
-`Nurtricenter/postman/`, con una colección por flujo, igual que ya están
+`postman/`, con una colección por flujo, igual que ya están
 agrupados los integration tests.
 
 ## Notas honestas

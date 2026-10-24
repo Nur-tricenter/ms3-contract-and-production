@@ -13,19 +13,19 @@ in-memory. Antes de tocar `ApiFactory`, lee la sección "Restricciones conocidas
 
 | Proyecto | Ruta | Rol |
 |---|---|---|
-| API | `Nurtricenter/Nurtricenter.Api/` | Arranca en memoria; expone `Program` |
-| Tests de integración | `Nurtricenter/Nurtricenter.MS3.IntegrationTests/` | Aquí van las pruebas nuevas |
-| Tests unitarios | `Nurtricenter/Nurtricenter.MS3.Tests/` | No se toca desde este skill |
-| Solución | `Nurtricenter/Nurtricenter.MS3.sln` | Agrupa los cinco proyectos |
+| API | `Nurtricenter.Api/` | Arranca en memoria; expone `Program` |
+| Tests de integración | `Nurtricenter.MS3.IntegrationTests/` | Aquí van las pruebas nuevas |
+| Tests unitarios | `Nurtricenter.MS3.Tests/` | No se toca desde este skill |
+| Solución | `Nurtricenter.MS3.sln` | Agrupa los cinco proyectos |
 
 ## Comandos
 
 ```bash
 # Solo las pruebas de integración
-dotnet test Nurtricenter/Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
+dotnet test Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
 
 # Suite completa (unitarias + integración)
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 Ambos se ejecutan desde la raíz del repositorio.

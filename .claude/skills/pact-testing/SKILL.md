@@ -14,21 +14,21 @@ abajo costaron sesiones de depuración real, no son hipotéticas.
 
 | Proyecto | Ruta | Rol |
 |---|---|---|
-| Consumer | `Nurtricenter/Nurtricenter.MS3.PactTests.Consumer/` | Define interacciones, genera `pacts/*.json` |
-| Provider | `Nurtricenter/Nurtricenter.MS3.PactTests.Provider/` | Hostea la API real en un puerto TCP real y verifica el pacto |
+| Consumer | `Nurtricenter.MS3.PactTests.Consumer/` | Define interacciones, genera `pacts/*.json` |
+| Provider | `Nurtricenter.MS3.PactTests.Provider/` | Hostea la API real en un puerto TCP real y verifica el pacto |
 | Pacto generado | `Nurtricenter.MS3.PactTests.Consumer/pacts/Nurtricenter Contracts Client-Nurtricenter MS3.json` | Se commitea al repo — es el contrato, no un artefacto de build |
 
 ## Comandos
 
 ```bash
 # 1. Generar/regenerar el pacto (consumer)
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
+dotnet test Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
 
 # 2. Verificar el pacto contra la API real (provider) — requiere que el paso 1 haya corrido antes
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
+dotnet test Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
 
 # Suite completa (unitarias + integración + contrato)
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 Todos se ejecutan desde la raíz del repositorio. No requieren Docker ni

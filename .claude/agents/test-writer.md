@@ -60,13 +60,13 @@ informe, no en el archivo.
 Escribe las pruebas, ejecútalas y **arregla lo que escribiste hasta que pasen**:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
 ```
 
 Si el objetivo incluye medir coverage, corre también:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --collect:"XPlat Code Coverage" --results-directory Nurtricenter/Nurtricenter.MS3.Tests/TestResults
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --collect:"XPlat Code Coverage" --results-directory Nurtricenter.MS3.Tests/TestResults
 ```
 
 Nunca termines dejando una prueba en rojo sin explicar por qué.

@@ -116,7 +116,7 @@ ciclo (`Outbox__PollingIntervalSeconds`, 5 s por defecto).
 
 ### Dentro de la plataforma
 
-Requiere que `dipl-arqui-microservicios` esté al lado de `nur-tricenter-local`
+Requiere que `ms3-contract-and-production` esté al lado de `nur-tricenter-local`
 (ya es así en este workspace) y la rama `feat/ms3-contracting` de
 `nur-tricenter-local`.
 

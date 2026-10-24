@@ -66,8 +66,8 @@ informe, no en el archivo.
 Primero generá el pacto, después verificalo — nunca al revés:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
+dotnet test Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
+dotnet test Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
 ```
 
 Si el consumer falla, arreglalo ahí. Si el consumer pasa pero el provider

@@ -21,7 +21,7 @@ Los dos stacks usan los mismos puertos de RabbitMQ: levanta uno a la vez.
 ## Nivel 1 — Pruebas automáticas (sin Docker)
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 Las pruebas de `Nurtricenter.MS3.IntegrationTests/Messaging/` cubren la mensajería
@@ -36,7 +36,6 @@ sin broker: el relay publica en un `BrokerEnMemoria` y la base es SQLite in-memo
 ## Nivel 2 — MS3 solo, con su propio RabbitMQ
 
 ```bash
-cd Nurtricenter
 docker compose up --build -d
 pwsh ./scripts/demo-eventos.ps1
 ```
@@ -66,15 +65,15 @@ pwsh ./scripts/start-stack.ps1
 Sin token: solo infraestructura, gateway y MS3.
 
 ```bash
-dotnet build Nurtricenter/Nurtricenter.Api -c Debug
-dotnet build Nurtricenter/Nurtricenter.MS3.WorkerService -c Debug
+dotnet build Nurtricenter.Api -c Debug
+dotnet build Nurtricenter.MS3.WorkerService -c Debug
 dotnet build ../nur-tricenter-api-gateway/ApiGateway.App -c Debug
 docker network create nur-tricenter-net
 cd ../nur-tricenter-local
 docker compose -f compose/docker-compose.yml -f compose/docker-compose.infra.yml -p nur-tricenter up -d contracting-api contracting-workerservice gateway
 ```
 
-Luego, desde `dipl-arqui-microservicios/Nurtricenter`:
+Luego, desde la raíz de `ms3-contract-and-production`:
 
 ```bash
 pwsh ./scripts/demo-eventos.ps1 -ApiBase http://localhost:15005/api/contracting

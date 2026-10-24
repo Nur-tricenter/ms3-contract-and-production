@@ -12,7 +12,7 @@ Todo vive en `C:\jesusferru\studies\diplomado\`.
 
 | Carpeta | Repo | Rol | Rama local |
 |---|---|---|---|
-| `dipl-arqui-microservicios/Nurtricenter` | `JesusFerru/dipl-arqui-microservicios` | **MS3** contratación y producción (tuyo) | `feat/ms3-platform-integration` |
+| `ms3-contract-and-production` | `JesusFerru/ms3-contract-and-production` (por crear en GitHub) | **MS3** contratación y producción (tuyo) | `main` |
 | `nur-tricenter-local` | `Nur-tricenter/nur-tricenter-local` | Orquestador: compose, topología de RabbitMQ, bases | `feat/ms3-contracting` |
 | `nur-tricenter-shared-kernels` | `Nur-tricenter/nur-tricenter-shared-kernels` | Kernels NuGet; **aquí van los contratos de eventos** | `feat/contracting-messages` |
 | `nur-tricenter-api-gateway` | `Nur-tricenter/nur-tricenter-api-gateway` | YARP + Consul | `main` (sin cambios) |
@@ -111,7 +111,7 @@ En este orden, porque cada paso desbloquea el siguiente:
    eso es del dueño.
 2. **Dueño de `nur-tricenter-local`:** PR de `feat/ms3-contracting`. Hay que acordar
    dónde vive MS3:
-   - Hoy el compose lo incluye desde `../../dipl-arqui-microservicios/Nurtricenter`.
+   - Hoy el compose lo incluye desde `../../ms3-contract-and-production`.
    - Si el equipo prefiere un repo propio en la org (p. ej. `ms3-contracting-production`),
      cambia esa ruta y `setup-project` lo clona.
    - Avísale también del arreglo de RabbitMQ: afecta al catálogo igual que a MS3.

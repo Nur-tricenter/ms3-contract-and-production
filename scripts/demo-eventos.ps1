@@ -3,7 +3,7 @@
 #   2. Crea un contrato con ese plan y lo paga  -> ContractActivated en ms4.contract-activated
 #   3. Arma, etiqueta y valida un paquete      -> PackageValidated  en ms5.package-validated
 #
-# Standalone (docker compose up --build en Nurtricenter/):
+# Standalone (docker compose up --build en la raíz del repo):
 #   pwsh ./scripts/demo-eventos.ps1
 # Plataforma (nur-tricenter-local, entrando por el gateway):
 #   pwsh ./scripts/demo-eventos.ps1 -ApiBase http://localhost:15005/api/contracting

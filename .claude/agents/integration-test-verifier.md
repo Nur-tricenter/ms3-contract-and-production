@@ -34,7 +34,7 @@ Lo más importante. Una prueba puede pasar sin probar nada:
 
 ### 2. Contraste con el código de producción
 
-Lee los endpoints en `Nurtricenter/Nurtricenter.Api/Endpoints/` y los handlers en
+Lee los endpoints en `Nurtricenter.Api/Endpoints/` y los handlers en
 `Nurtricenter.MS3.Application/Handlers/`. Comprueba que las expectativas de la
 prueba coinciden con lo que el código hace de verdad — sobre todo los códigos
 HTTP, donde es fácil asumir 400 cuando el endpoint devuelve 404 o 500.
@@ -53,13 +53,13 @@ lanza `InvalidOperationException` y FastEndpoints la traduce a **500**, no a 400
 Ejecuta la suite. No confíes en el informe del otro agente:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
+dotnet test Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
 ```
 
 Corre también la suite completa para detectar regresiones en las unitarias:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 ### 5. Integridad del entorno

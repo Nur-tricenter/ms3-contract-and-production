@@ -12,23 +12,23 @@ Domain y Application. No lo rediseñes.
 
 | Proyecto / carpeta | Ruta | Rol |
 |---|---|---|
-| Pruebas unitarias | `Nurtricenter/Nurtricenter.MS3.Tests/` | Aquí van las pruebas nuevas |
+| Pruebas unitarias | `Nurtricenter.MS3.Tests/` | Aquí van las pruebas nuevas |
 | `Domain/` | `Nurtricenter.MS3.Tests/Domain/` | Agregados, entidades y value objects de `Nurtricenter.MS3.Core`. Sin mocks. |
 | `Application/` | `Nurtricenter.MS3.Tests/Application/` | `IRequestHandler` de MediatR en `Nurtricenter.MS3.Application`. Con mocks. |
-| Pruebas de integración | `Nurtricenter/Nurtricenter.MS3.IntegrationTests/` | No se toca desde este skill — usa el skill `integration-testing` |
-| Solución | `Nurtricenter/Nurtricenter.MS3.sln` | Agrupa los cinco proyectos |
+| Pruebas de integración | `Nurtricenter.MS3.IntegrationTests/` | No se toca desde este skill — usa el skill `integration-testing` |
+| Solución | `Nurtricenter.MS3.sln` | Agrupa los cinco proyectos |
 
 ## Comandos
 
 ```bash
 # Solo las pruebas unitarias
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
 
 # Con reporte de code coverage (coverage.cobertura.xml)
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --collect:"XPlat Code Coverage" --results-directory Nurtricenter/Nurtricenter.MS3.Tests/TestResults
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --collect:"XPlat Code Coverage" --results-directory Nurtricenter.MS3.Tests/TestResults
 
 # Suite completa (unitarias + integración)
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 Todos se ejecutan desde la raíz del repositorio.

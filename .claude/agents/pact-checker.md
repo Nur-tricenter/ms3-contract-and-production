@@ -47,7 +47,7 @@ de corrupción por tildes u otro problema de encoding).
 
 ### 3. Contraste con el código de producción
 
-Lee los endpoints reales en `Nurtricenter/Nurtricenter.Api/Endpoints/` y los
+Lee los endpoints reales en `Nurtricenter.Api/Endpoints/` y los
 handlers en `Nurtricenter.MS3.Application/Handlers/`. Comprobá que la
 interacción declarada coincide con lo que el endpoint hace de verdad — código
 HTTP, forma del body, headers de respuesta.
@@ -57,15 +57,15 @@ HTTP, forma del body, headers de respuesta.
 Ejecutá ambos lados. No confíes en el informe del otro agente:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
-dotnet test Nurtricenter/Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
+dotnet test Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
+dotnet test Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
 ```
 
 Corré también la suite completa para detectar regresiones en unitarias e
 integración:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 ### 5. Integridad del entorno

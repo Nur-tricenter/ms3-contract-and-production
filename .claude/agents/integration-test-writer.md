@@ -29,7 +29,7 @@ inventes GUIDs: si necesitas un recurso inexistente, la forma correcta es
 ## Cómo escribes las pruebas
 
 1. **Ubica el archivo donde corresponde.** Una clase por flujo, en
-   `Nurtricenter/Nurtricenter.MS3.IntegrationTests/`. Si extiendes una clase
+   `Nurtricenter.MS3.IntegrationTests/`. Si extiendes una clase
    existente, respeta su estructura.
 2. **Engancha la factory con `IClassFixture<ApiFactory>`.** Cada clase recibe su
    propia instancia, con base limpia.
@@ -54,7 +54,7 @@ informe, no en el archivo.
 Escribe las pruebas, ejecútalas y **arregla lo que escribiste hasta que pasen**:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
+dotnet test Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
 ```
 
 Nunca termines dejando una prueba en rojo sin explicar por qué.

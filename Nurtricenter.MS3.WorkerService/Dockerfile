@@ -1,4 +1,4 @@
-# Se construye con la carpeta Nurtricenter/ como contexto:
+# Se construye con la raíz del repo como contexto:
 #   docker build -f Nurtricenter.MS3.WorkerService/Dockerfile .
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src

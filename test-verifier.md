@@ -55,21 +55,21 @@ hace de verdad — sobre todo las excepciones (`ArgumentException` con qué
 Ejecuta la suite. No confíes en el informe del otro agente:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
 ```
 
 Corre también la suite completa para detectar regresiones en las de
 integración:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.sln
+dotnet test Nurtricenter.MS3.sln
 ```
 
 Si el pedido incluye coverage, recolecta y lee el `line-rate` del paquete
 afectado:
 
 ```bash
-dotnet test Nurtricenter/Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --collect:"XPlat Code Coverage" --results-directory Nurtricenter/Nurtricenter.MS3.Tests/TestResults
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --collect:"XPlat Code Coverage" --results-directory Nurtricenter.MS3.Tests/TestResults
 ```
 
 ### 5. Integridad del entorno
