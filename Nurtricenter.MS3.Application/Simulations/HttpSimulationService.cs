@@ -35,6 +35,9 @@ public sealed class HttpSimulationService : ISimulationService
     public List<SimActiveCalendar> GetActiveCalendars(DateTime date)
         => SendAndRead<List<SimActiveCalendar>>(new HttpRequestMessage(HttpMethod.Get, "/api/v1/calendars/active-tomorrow")) ?? [];
 
+    public string? GetRecipeName(Guid recipeId)
+        => null;
+
     private T? SendAndRead<T>(HttpRequestMessage request)
     {
         using var response = _httpClient.Send(request);

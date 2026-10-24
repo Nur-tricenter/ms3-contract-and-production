@@ -1,0 +1,33 @@
+{
+  "rabbitmq_version": "3.13.0",
+  "users": [
+    { "name": "guest", "password_hash": "OhDG5g1/YyfBtewhNzbr6108/E3D/cvWcixDN0bXIuLbLQiO", "hashing_algorithm": "rabbit_password_hashing_sha256", "tags": ["administrator"], "limits": {} }
+  ],
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "permissions": [
+    { "user": "guest", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" }
+  ],
+  "exchanges": [
+    { "name": "meal-plan-published", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "recipe-published", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "recipe-updated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "contract-activated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "package-validated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} }
+  ],
+  "queues": [
+    { "name": "ms3.meal-plan-published", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "ms3.recipe-published", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "ms3.recipe-updated", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "ms4.contract-activated", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "ms5.package-validated", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
+  ],
+  "bindings": [
+    { "source": "meal-plan-published", "vhost": "/", "destination": "ms3.meal-plan-published", "destination_type": "queue", "routing_key": "", "arguments": {} },
+    { "source": "recipe-published", "vhost": "/", "destination": "ms3.recipe-published", "destination_type": "queue", "routing_key": "", "arguments": {} },
+    { "source": "recipe-updated", "vhost": "/", "destination": "ms3.recipe-updated", "destination_type": "queue", "routing_key": "", "arguments": {} },
+    { "source": "contract-activated", "vhost": "/", "destination": "ms4.contract-activated", "destination_type": "queue", "routing_key": "", "arguments": {} },
+    { "source": "package-validated", "vhost": "/", "destination": "ms5.package-validated", "destination_type": "queue", "routing_key": "", "arguments": {} }
+  ]
+}

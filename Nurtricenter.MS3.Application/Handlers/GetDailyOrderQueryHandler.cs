@@ -49,7 +49,7 @@ public sealed class GetDailyOrderQueryHandler : IRequestHandler<GetDailyOrderQue
                 if (recipeQuantities.ContainsKey(meal.RecipeId))
                     recipeQuantities[meal.RecipeId] = (recipeQuantities[meal.RecipeId].Name, recipeQuantities[meal.RecipeId].Count + 1);
                 else
-                    recipeQuantities[meal.RecipeId] = ($"Recipe-{meal.RecipeId.ToString()[..8]}", 1);
+                    recipeQuantities[meal.RecipeId] = (_sim.GetRecipeName(meal.RecipeId) ?? $"Recipe-{meal.RecipeId.ToString()[..8]}", 1);
             }
         }
 

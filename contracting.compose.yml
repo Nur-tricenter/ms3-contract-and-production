@@ -1,0 +1,82 @@
+# Variante de plataforma de MS3 (Contratación y Producción).
+#
+# Fragmento que incluye el compose de nur-tricenter-local; no se levanta solo.
+# Usa la infraestructura compartida (nur-tricenter-postgres, nur-tricenter-rabbitmq,
+# nur-tricenter-consul) y monta los binarios de bin/Debug como el catálogo e identity:
+# compilar antes de levantar.
+#
+# El docker-compose.yml de esta carpeta es la variante standalone (su propio Postgres
+# y RabbitMQ) y no se incluye en la plataforma.
+
+services:
+  contracting-api:
+    image: mcr.microsoft.com/dotnet/aspnet:8.0
+    container_name: nur-tricenter-contracting-api
+    hostname: contracting-api
+    working_dir: /app
+    command: ["dotnet", "Nurtricenter.MS3.Api.dll"]
+    volumes:
+      - ./Nurtricenter.Api/bin/Debug/net8.0:/app:ro
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Host=nur-tricenter-postgres;Port=5432;Database=nur_tricenter_contracting;Username=dev-only;Password=dev-only-password"
+      Migrations__ApplyOnStartup: "true"
+      Seed__Enabled: "true"
+      Swagger__Enabled: "false"
+      ServiceRegistration__ServiceDiscoveryAddress: "http://nur-tricenter-consul:8500"
+      ServiceRegistration__ServiceName: "contracting"
+      ServiceRegistration__Host: "contracting-api"
+      ServiceRegistration__Port: "8080"
+    networks: [nur-tricenter-net]
+    depends_on:
+      db:
+        condition: service_healthy
+      consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  contracting-workerservice:
+    image: mcr.microsoft.com/dotnet/aspnet:8.0
+    container_name: nur-tricenter-contracting-workerservice
+    hostname: contracting-workerservice
+    working_dir: /app
+    command: ["dotnet", "Nurtricenter.MS3.WorkerService.dll"]
+    volumes:
+      - ./Nurtricenter.MS3.WorkerService/bin/Debug/net8.0:/app:ro
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=nur-tricenter-postgres;Port=5432;Database=nur_tricenter_contracting;Username=dev-only;Password=dev-only-password"
+      RabbitMqSettings__Host: "nur-tricenter-rabbitmq"
+      RabbitMqSettings__UserName: "guest"
+      RabbitMqSettings__Password: "guest"
+      RabbitMqSettings__VirtualHost: "/"
+      RabbitMqSettings__MaxRetryAttempts: "3"
+      RabbitMqSettings__RetryBaseDelayMilliseconds: "500"
+      Outbox__PollingIntervalSeconds: "5"
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: "Warning"
+    networks: [nur-tricenter-net]
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      contracting-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -qs 'Nurtricenter.MS3.WorkerService' /proc/*/cmdline || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  nur-tricenter-net:
+    external: true

@@ -1,37 +1,58 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
 using Microsoft.EntityFrameworkCore;
+using Nurtricenter.MS3.Api;
 using Nurtricenter.MS3.Application;
 using Nurtricenter.MS3.Infrastructure;
 using Nurtricenter.MS3.Infrastructure.Data;
+using Nurtricenter.MS3.Infrastructure.Discovery;
+using Nurtricenter.MS3.Infrastructure.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var isDevelopment = builder.Environment.IsDevelopment();
+var applyMigrations = builder.Configuration.GetValue("Migrations:ApplyOnStartup", isDevelopment);
+var seedEnabled = builder.Configuration.GetValue("Seed:Enabled", isDevelopment);
+var swaggerEnabled = builder.Configuration.GetValue("Swagger:Enabled", isDevelopment);
+
 builder.Services.AddFastEndpoints();
 
-
-builder.Services.SwaggerDocument(o =>
+if (swaggerEnabled)
 {
-    o.DocumentSettings = s =>
+    builder.Services.SwaggerDocument(o =>
     {
-        s.Title = "Nurtricenter MS3 - Contracting & Production";
-        s.Version = "v1";
-        s.Description = "Microservice for contract management, billing, and daily production/packaging operations.";
-    };
-});
+        o.DocumentSettings = s =>
+        {
+            s.Title = "Nurtricenter MS3 - Contracting & Production";
+            s.Version = "v1";
+            s.Description = "Microservice for contract management, billing, and daily production/packaging operations.";
+        };
+    });
+}
 
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddCatalogProjections();
+
+builder.Services.AddSingleton<IServerPortResolver, ServerAddressesPortResolver>();
+builder.Services.AddConsulServiceRegistration(builder.Configuration);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (applyMigrations || seedEnabled)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
-    await DatabaseSeeder.SeedAsync(db);
 
+    if (applyMigrations)
+        await db.Database.MigrateAsync();
+
+    if (seedEnabled)
+        await DatabaseSeeder.SeedAsync(db);
+}
+
+if (swaggerEnabled)
+{
     app.UseSwaggerGen();
     app.UseSwaggerUi();
 }

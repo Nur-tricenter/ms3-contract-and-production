@@ -65,4 +65,7 @@ public sealed class SimulationDataService : ISimulationService
 
     public List<SimActiveCalendar> GetActiveCalendars(DateTime date)
         => ActiveCalendars;
+
+    public string? GetRecipeName(Guid recipeId)
+        => null;
 }
