@@ -18,8 +18,12 @@ public sealed class OutgoingIntegrationEventConfiguration : IEntityTypeConfigura
         builder.Property(e => e.Payload).IsRequired().HasColumnType("jsonb");
         builder.Property(e => e.Status).IsRequired().HasMaxLength(50);
         builder.Property(e => e.CreatedAt).IsRequired();
+        builder.Property(e => e.PublishedAt);
+
+        builder.Ignore(e => e.IsPending);
 
         builder.HasIndex(e => e.EventType);
         builder.HasIndex(e => e.CreatedAt);
+        builder.HasIndex(e => e.Status);
     }
 }

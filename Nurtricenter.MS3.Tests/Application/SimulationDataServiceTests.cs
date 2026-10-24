@@ -139,4 +139,25 @@ public sealed class SimulationDataServiceTests
 
         calendarios.Should().NotContain(c => c.PatientId == PacienteLuisFerrufino);
     }
+
+    [Fact]
+    public void GetRecipeName_devuelve_null_porque_la_simulacion_no_conoce_nombres_de_recetas()
+    {
+        var nombre = _service.GetRecipeName(Guid.Parse("20000000-0000-0000-0000-000000000001"));
+
+        nombre.Should().BeNull();
+    }
+}
+
+public sealed class HttpSimulationServiceTests
+{
+    [Fact]
+    public void GetRecipeName_devuelve_null_sin_llamar_al_servidor_mock()
+    {
+        var servicio = new HttpSimulationService(new HttpClient { BaseAddress = new Uri("http://127.0.0.1:1") });
+
+        var nombre = servicio.GetRecipeName(Guid.NewGuid());
+
+        nombre.Should().BeNull();
+    }
 }

@@ -156,18 +156,68 @@ public sealed class ApproveQualityCommandHandlerTests
     private readonly Mock<IPackageRepository> _repository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IOutgoingEventRepository> _outgoingEvents = new();
+    private readonly Mock<ISimulationService> _simulation = new();
+
+    private ApproveQualityCommandHandler CreateHandler()
+        => new(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _simulation.Object);
+
+    [Fact]
+    public async Task Handle_incluye_direccion_tracking_y_coordenadas_del_calendario_en_el_evento_a_ms5()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns(
+        [
+            new SimActiveCalendar(Guid.NewGuid(), package.PatientId, package.CatalogPlanId, "Otra dirección 999", -1.0, -2.0, "08:00"),
+            new SimActiveCalendar(Guid.NewGuid(), package.PatientId, package.CatalogPlanId, "Av. Principal 123", -17.7688, -63.1827, "10:00")
+        ]);
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+
+        await CreateHandler().Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("deliveryAddress").GetString().Should().Be("Av. Principal 123");
+        payload.RootElement.GetProperty("trackingNumber").GetString().Should().Be(package.Label!.TrackingNumber);
+        payload.RootElement.GetProperty("latitude").GetDouble().Should().Be(-17.7688);
+        payload.RootElement.GetProperty("longitude").GetDouble().Should().Be(-63.1827);
+    }
+
+    [Fact]
+    public async Task Handle_deja_coordenadas_nulas_cuando_ningun_calendario_coincide_con_la_direccion()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns([]);
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+
+        await CreateHandler().Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("deliveryAddress").GetString().Should().Be("Av. Principal 123");
+        payload.RootElement.GetProperty("latitude").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        payload.RootElement.GetProperty("longitude").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+    }
 
     [Fact]
     public async Task Handle_validates_package_and_emits_transfer_event_to_ms5()
     {
         var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns([]);
         OutgoingIntegrationEvent? emitted = null;
         _outgoingEvents
             .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
             .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
             .Returns(Task.CompletedTask);
-        var handler = new ApproveQualityCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object);
+        var handler = CreateHandler();
 
         var result = await handler.Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
 
@@ -187,7 +237,7 @@ public sealed class ApproveQualityCommandHandlerTests
     public async Task Handle_returns_not_found_when_package_missing()
     {
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync((Package?)null);
-        var handler = new ApproveQualityCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object);
+        var handler = CreateHandler();
 
         var result = await handler.Handle(new ApproveQualityCommand(Guid.NewGuid(), "SUP-99"), CancellationToken.None);
 
@@ -201,7 +251,7 @@ public sealed class ApproveQualityCommandHandlerTests
     {
         var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Assembled);
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
-        var handler = new ApproveQualityCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object);
+        var handler = CreateHandler();
 
         var act = () => handler.Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
 

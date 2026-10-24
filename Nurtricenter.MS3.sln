@@ -14,7 +14,13 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
 		..\.gitignore = ..\.gitignore
+		..\.claude\agents\integration-test-verifier.md = ..\.claude\agents\integration-test-verifier.md
+		..\.claude\agents\integration-test-writer.md = ..\.claude\agents\integration-test-writer.md
+		..\.claude\agents\pact-checker.md = ..\.claude\agents\pact-checker.md
+		..\.claude\agents\pact-writer.md = ..\.claude\agents\pact-writer.md
 		README.md = README.md
+		test-verifier.md = test-verifier.md
+		..\.claude\agents\test-writer.md = ..\.claude\agents\test-writer.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.Tests", "Nurtricenter.MS3.Tests\Nurtricenter.MS3.Tests.csproj", "{4466C878-A077-4A34-B5CD-10DC1CA6389D}"
@@ -26,6 +32,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.PactTests.Provider", "Nurtricenter.MS3.PactTests.Provider\Nurtricenter.MS3.PactTests.Provider.csproj", "{A6743363-2260-44ED-922A-E7F6A45F7B1C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Nurtricenter.Api", "Nurtricenter.Api", "{B862F425-93CE-1520-3EC6-A52E6933FE4A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nurtricenter.MS3.WorkerService", "Nurtricenter.MS3.WorkerService\Nurtricenter.MS3.WorkerService.csproj", "{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -133,6 +141,18 @@ Global
 		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x64.Build.0 = Release|Any CPU
 		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x86.ActiveCfg = Release|Any CPU
 		{A6743363-2260-44ED-922A-E7F6A45F7B1C}.Release|x86.Build.0 = Release|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Debug|x64.Build.0 = Debug|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Debug|x86.Build.0 = Debug|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Release|x64.ActiveCfg = Release|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Release|x64.Build.0 = Release|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Release|x86.ActiveCfg = Release|Any CPU
+		{6C76F41E-8404-4EE7-BDAC-52EBB85695DF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

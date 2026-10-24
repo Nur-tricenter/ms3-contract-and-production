@@ -111,4 +111,31 @@ public sealed class GetDailyOrderQueryHandlerTests
         result.Value.RecipesSummary[0].TotalPortionsRequired.Should().Be(2);
         _repository.Verify(r => r.AddAsync(It.IsAny<DailyProductionOrder>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_usa_el_nombre_de_receta_proyectado_desde_el_catalogo()
+    {
+        _repository
+            .Setup(r => r.GetByProductionDateAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DailyProductionOrder?)null);
+        var planId = Guid.NewGuid();
+        var recetaConocida = Guid.NewGuid();
+        var recetaDesconocida = Guid.Parse("abcdef12-0000-0000-0000-000000000000");
+        _simulation
+            .Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>()))
+            .Returns(new List<SimActiveCalendar> { new(Guid.NewGuid(), Guid.NewGuid(), planId, "Av. Principal 123", -16.5, -68.1, "10:00") });
+        _simulation
+            .Setup(s => s.GetPlanStructures(It.IsAny<List<Guid>>()))
+            .Returns(new List<SimPlanStructure>
+            {
+                new(planId, new List<SimMealBlock> { new("almuerzo", recetaConocida), new("cena", recetaDesconocida) })
+            });
+        _simulation.Setup(s => s.GetRecipeName(recetaConocida)).Returns("Sopa de quinua");
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+
+        var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
+
+        result.Value!.RecipesSummary.Should().Contain(r => r.RecipeId == recetaConocida && r.RecipeName == "Sopa de quinua");
+        result.Value.RecipesSummary.Should().Contain(r => r.RecipeId == recetaDesconocida && r.RecipeName == "Recipe-abcdef12");
+    }
 }
