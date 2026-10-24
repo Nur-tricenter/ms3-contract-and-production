@@ -27,31 +27,41 @@ public sealed class GetDailyOrderQueryHandler : IRequestHandler<GetDailyOrderQue
         if (existing is not null)
             return MapToResponse(existing);
 
-        // Simulate MS4: get active calendars for the date
+        // MS4: active calendars for the date (real or simulated)
         var calendars = _sim.GetActiveCalendars(request.ProductionDate);
         if (calendars.Count == 0)
             return Result.Failure<DailyOrderResponse>(
                 new Error("NO_CALENDARS", $"No active calendars found for {request.ProductionDate:yyyy-MM-dd}.", ErrorType.NotFound));
 
-        // Simulate MS2: get plan structures for all plan IDs
-        var planIds = calendars.Select(c => c.PlanId).Distinct().ToList();
-        var structures = _sim.GetPlanStructures(planIds);
+        // Plan structures are only needed for calendars that do not bring MS4's menu
+        var planIdsWithoutMenu = calendars
+            .Where(c => c.Menu is not { Count: > 0 })
+            .Select(c => c.PlanId)
+            .Distinct()
+            .ToList();
+        var structures = planIdsWithoutMenu.Count == 0 ? [] : _sim.GetPlanStructures(planIdsWithoutMenu);
 
-        // Build recipe summary by aggregating
         var recipeQuantities = new Dictionary<Guid, (string Name, int Count)>();
         foreach (var calendar in calendars)
         {
+            if (calendar.Menu is { Count: > 0 } menu)
+            {
+                foreach (var item in menu)
+                    AddPortions(recipeQuantities, item.RecipeId, item.RecipeName, Math.Max(item.Rations, 1));
+
+                continue;
+            }
+
             var structure = structures.FirstOrDefault(s => s.CatalogPlanId == calendar.PlanId);
             if (structure is null) continue;
 
             foreach (var meal in structure.Meals)
-            {
-                if (recipeQuantities.ContainsKey(meal.RecipeId))
-                    recipeQuantities[meal.RecipeId] = (recipeQuantities[meal.RecipeId].Name, recipeQuantities[meal.RecipeId].Count + 1);
-                else
-                    recipeQuantities[meal.RecipeId] = (_sim.GetRecipeName(meal.RecipeId) ?? $"Recipe-{meal.RecipeId.ToString()[..8]}", 1);
-            }
+                AddPortions(recipeQuantities, meal.RecipeId, _sim.GetRecipeName(meal.RecipeId) ?? $"Recipe-{meal.RecipeId.ToString()[..8]}", 1);
         }
+
+        if (recipeQuantities.Count == 0)
+            return Result.Failure<DailyOrderResponse>(
+                new Error("NO_RECIPES", $"No recipes are known for the {calendars.Count} delivery(ies) of {request.ProductionDate:yyyy-MM-dd}: MS4 sent no menu and the plans have no known structure.", ErrorType.Conflict));
 
         var items = recipeQuantities.Select(kv =>
             new ProductionItem(kv.Key, kv.Value.Name, kv.Value.Count)).ToList();
@@ -61,6 +71,13 @@ public sealed class GetDailyOrderQueryHandler : IRequestHandler<GetDailyOrderQue
         await _dailyProductionOrderRepository.AddAsync(order);
 
         return MapToResponse(order);
+    }
+
+    private static void AddPortions(Dictionary<Guid, (string Name, int Count)> recipeQuantities, Guid recipeId, string recipeName, int portions)
+    {
+        recipeQuantities[recipeId] = recipeQuantities.TryGetValue(recipeId, out var current)
+            ? (current.Name, current.Count + portions)
+            : (recipeName, portions);
     }
 
     private static DailyOrderResponse MapToResponse(Core.Aggregates.DailyProductionOrder order)

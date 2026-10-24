@@ -1,7 +1,8 @@
 # Hoja de ruta: MS3 integrado con el equipo
 
 Qué está hecho, qué falta, quién lo hace y cómo probarlo mientras falta MS1.
-Estado al 2026-10-24.
+Estado al 2026-10-24. La plataforma completa ya se probó de punta a punta con
+servicios reales (detalle al final de PRUEBAS_INTEGRACION.md).
 
 - Diseño de la integración: [INTEGRACION_PLATAFORMA.md](INTEGRACION_PLATAFORMA.md).
 - Cómo probar y qué trae cada llamada y evento: [PRUEBAS_INTEGRACION.md](PRUEBAS_INTEGRACION.md).
@@ -37,7 +38,7 @@ hecho que otros toman cuando quieran (MS2 → MS3, MS3 → MS5).
 | shared-kernels | `Messages/Contracting/PackageValidated` y versión 1.2.0 | Solo vocabulario, cero lógica. MS3 → MS4 es REST, así que no lleva contrato de evento |
 | nur-tricenter-local | Incluir MS3, clonarlo en `setup-project`, compilarlo y crear `ms3-service` en `start-stack`; exchange y cola de `package-validated`; base de MS3; reimportar la topología en cada arranque | Mismo patrón que siguieron MS4 y MS5 |
 | gateway | **Nada** | Las rutas salen de Consul: `contracting` → `/api/contracting/*` |
-| MS4 | **Nada** | MS3 usa los endpoints que MS4 ya expone (`/schedule`, `/active-tomorrow`) con los scopes que MS4 ya exige |
+| MS4 | Campo `menu` al final de `active-tomorrow` (rama `feat/active-tomorrow-menu`) | Aditivo: MS4 ya guarda el menú del día; sin él MS3 no sabe qué recetas producir para un plan real. El resto (`/schedule`, scopes) se usa tal cual |
 | identity | **Nada** | La cuenta `ms3-service` se crea con el endpoint existente de usuarios |
 | MS2 | **Nada obligatorio** | Opcional: `Price` en `MealPlanPublished` (hoy MS3 proyecta costo 0) |
 | MS5 | Consumidor de `ms5.package-validated` (su equipo) | Hoy recibe paquetes por un POST anónimo |
@@ -53,6 +54,7 @@ hecho que otros toman cuando quieran (MS2 → MS3, MS3 → MS5).
 | A3 | Acceso a la org `Nur-tricenter` | Listo | MS3 ya está subido |
 | A4 | Token de GitHub (classic) con `read:packages` | **Pendiente** | GitHub → Settings → Developer settings → Personal access tokens (classic) |
 | A5 | Variables de entorno del token | **Pendiente** | Ver abajo; luego cerrar y abrir la terminal |
+| A5b | Mientras tanto: kernel compilado localmente | Hecho | Paquetes `Nur.Tricenter.*` 1.1.0 compilados desde el código público del kernel, en `C:jesusferrustudiesdiplomado.nuget-local`; se usan con `$env:NUGET_PACKAGES` apuntando ahí. Con el token deja de hacer falta |
 | A6 | `.env` de MS5 con la conexión a Neon | Opcional | Pedírselo al dueño de MS5; sin él, MS5 arranca pero falla en su primera consulta |
 | A7 | `gh` CLI (opcional) | No instalado | `winget install GitHub.cli` para abrir PRs desde la terminal |
 
@@ -74,6 +76,8 @@ Si no da 401, el token sirve.
 | Repo | Rama | Commit |
 |---|---|---|
 | MS3 | `feat/ms4-delivery-calendar-rest` | `feat: call MS4 schedule and active-tomorrow through the gateway with ms3-service` |
+| MS3 | `feat/ms4-active-tomorrow-menu` (sobre la anterior) | `feat: build the daily order from MS4 menu and return 422 without recipes` |
+| MS4 | `feat/active-tomorrow-menu` | `feat: include the day menu in active-tomorrow` |
 | nur-tricenter-local | `feat/ms3-contracting` | `feat: add ms3 contracting to the local stack` |
 | shared-kernels | `feat/contracting-messages` | `feat: add contracting PackageValidated message` |
 | knowledge | `ms3/context` | `docs(ms3): add MS3 contracting context` (después de los anteriores) |
@@ -87,8 +91,10 @@ integrante (regla del equipo).
    `Nur.Tricenter.Integration 1.2.0`. Publicar necesita `write:packages`.
 2. **Dueño de `nur-tricenter-local`:** mergear `feat/ms3-contracting`. Avisarle del
    arreglo de RabbitMQ: protege a todos los consumidores, no solo a MS3.
-3. **Dueño de MS4:** avisarle que MS3 ya llama a `/schedule` y `/active-tomorrow`
-   como `ms3-service`. Su gap `ms4-gap-04` (estado `InProduction`) sigue abierto:
+3. **Dueño de MS4:** revisar y mergear `feat/active-tomorrow-menu` (campo `menu` en
+   `active-tomorrow`) y saber que MS3 ya llama a `/schedule` y `/active-tomorrow` como
+   `ms3-service`. Sus pruebas unitarias pasan; las funcionales (Aspire) no levantaron
+   la base en esta máquina y conviene correrlas en la suya. Su gap `ms4-gap-04` (estado `InProduction`) sigue abierto:
    MS3 podría avisar "empecé a producir" si acuerdan el endpoint.
 4. **Equipo de MS5:** consumidor de `ms5.package-validated`. La tabla de mapeo de
    campos está en PRUEBAS_INTEGRACION.md.
@@ -141,6 +147,8 @@ Base de las rutas:
 | CU11 | Descubrimiento por gateway | Abrir `http://localhost:8500` y llamar a `/api/contracting/v1/sim/patients/00000000-0000-0000-0000-000000000001` en `:15005` | Servicio `contracting` en verde; 200 desde el gateway |
 | CU12 | Reinicio del broker no rompe el ruteo | `docker restart` del RabbitMQ y repetir CU5 | Los bindings se reimportan y el mensaje llega |
 | CU13 | (Fase D) Catálogo real | `start-stack.ps1` con token | Los planes y recetas sembrados por MS2 aparecen solos en MS3; contratar uno de 15 o 30 días y ver su calendario en MS4 |
+| CU14 | Orden con el menú real de MS4 | Con MS4 en `feat/active-tomorrow-menu`: contrato y pago de un plan real → dirección a los días en MS4 → `resolve-daily-catalog` → `GET /v1/production/daily-order?productionDate=<día>` | 200 con las recetas reales del día y sus raciones |
+| CU15 | Sin recetas conocidas | MS4 sin el campo `menu` y plan real de MS2 | 422 `NO_RECIPES` con mensaje, sin crear la orden (antes 500) |
 
 Consultas útiles a la base de MS3:
 

@@ -46,5 +46,9 @@ public sealed class DeliveryCalendarSimulationService : ISimulationService
         delivery.Address,
         delivery.Latitude,
         delivery.Longitude,
-        delivery.Hour?.ToString("HH:mm") ?? string.Empty);
+        delivery.Hour?.ToString("HH:mm") ?? string.Empty,
+        delivery.Menu?
+            .OrderBy(item => item.MealTimeOrder)
+            .Select(item => new SimMenuItem(item.MealTime, item.RecipeId, item.RecipeName, item.Rations))
+            .ToList());
 }

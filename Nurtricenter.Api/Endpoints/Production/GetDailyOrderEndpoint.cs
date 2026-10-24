@@ -21,7 +21,8 @@ public sealed class GetDailyOrderEndpoint : Endpoint<GetDailyOrderRequest, Daily
             .WithTags("Production")
             .WithSummary("Obtiene la orden de producción diaria para una fecha específica")
             .Produces<DailyOrderResponse>(200)
-            .ProducesProblem(404));
+            .ProducesProblem(404)
+            .ProducesProblem(422));
         AllowAnonymous();
     }
 
@@ -33,6 +34,8 @@ public sealed class GetDailyOrderEndpoint : Endpoint<GetDailyOrderRequest, Daily
 
         if (result.IsSuccess)
             await SendOkAsync(result.Value!, ct);
+        else if (result.Error?.Code == "NO_RECIPES")
+            ThrowError(result.Error.Description, 422);
         else
             await SendNotFoundAsync(ct);
     }

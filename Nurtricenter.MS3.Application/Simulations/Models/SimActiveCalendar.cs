@@ -7,5 +7,13 @@ public sealed record SimActiveCalendar(
     string Address,
     double Latitude,
     double Longitude,
-    string DeliveryTime
+    string DeliveryTime,
+    IReadOnlyList<SimMenuItem>? Menu = null
+);
+
+public sealed record SimMenuItem(
+    string MealTime,
+    Guid RecipeId,
+    string RecipeName,
+    int Rations
 );

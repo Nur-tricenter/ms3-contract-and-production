@@ -11,7 +11,17 @@ public interface IDeliveryCalendarClient
 
 public sealed record ScheduleDeliveriesRequest(Guid ContractId, Guid PatientId, Guid PlanId, int Duration, DateOnly StartDate);
 
-public sealed record ActiveDelivery(int PackId, Guid PatientId, Guid PlanId, TimeOnly? Hour, string Address, double Latitude, double Longitude);
+public sealed record ActiveDelivery(
+    int PackId,
+    Guid PatientId,
+    Guid PlanId,
+    TimeOnly? Hour,
+    string Address,
+    double Latitude,
+    double Longitude,
+    IReadOnlyList<ActiveDeliveryMenuItem>? Menu = null);
+
+public sealed record ActiveDeliveryMenuItem(string MealTime, int MealTimeOrder, Guid RecipeId, string RecipeName, int Rations);
 
 public sealed class DeliveryCalendarRejectedException : Exception
 {
