@@ -32,8 +32,9 @@ sin broker ni MS4: el relay publica en un `BrokerEnMemoria`, MS4 es un
 |---|---|
 | `OutboxRelayTests` | `CreateSchedule` → `POST /schedule` a MS4 con duración e inicio; MS4 rechaza o falta duración → `Rejected`; MS4 caído → pendiente; MS4 sin configurar → `Unroutable`; `TransferToLogistics` → `PackageValidated` en `package-validated`; no republica; tipo desconocido o payload inválido → `Unroutable`; broker caído → la fila queda pendiente |
 | `CatalogConsumersTests` | Proyección de planes y recetas; redelivery con el mismo `Id` se descarta (inbox); deserializa el JSON exacto que publica el catálogo |
-| `DeliveryCalendarClientTests` | Cliente HTTP real contra un MS4 e identity falsos: login de `ms3-service`, `Bearer`, JSON exacto de `POST /schedule`, 400/422 → rechazo, 5xx → reintento, mapeo de `active-tomorrow` |
+| `DeliveryCalendarClientTests` | Cliente HTTP real contra un MS4 e identity falsos: login de `ms3-service`, `Bearer`, JSON exacto de `POST /schedule`, 400/422 → rechazo, 5xx → reintento, mapeo de `active-tomorrow` con y sin `menu` |
 | `CatalogProjectionFlowTests` | Por HTTP: contrato con un plan que solo existe en la proyección → 201; pago → el relay crea el calendario en MS4 con la duración del plan proyectado y el día siguiente como inicio |
+| `DailyOrderSinRecetasTests` | Por HTTP: calendario sin menú de un plan desconocido → `GET /v1/production/daily-order` responde 422 con mensaje y no crea la orden |
 
 ## Nivel 2 — MS3 solo, con su propio RabbitMQ
 
@@ -174,11 +175,21 @@ Como MS4 es idempotente por `contractId`, un reintento no crea un segundo calend
 - **Qué devuelve MS4:**
 
 ```json
-[ { "packId": 101, "patientId": "guid", "planId": "guid", "hour": "10:30:00", "address": "Av. Banzer 123, Santa Cruz", "latitude": -17.78, "longitude": -63.18 } ]
+[ { "packId": 1, "patientId": "guid", "planId": "guid", "hour": null, "address": "Av. Banzer 123, Santa Cruz", "latitude": -17.78, "longitude": -63.18,
+    "menu": [ { "mealTime": "Breakfast", "mealTimeOrder": 1, "recipeId": "guid", "recipeName": "Api con Pastel", "rations": 1 },
+              { "mealTime": "Lunch", "mealTimeOrder": 3, "recipeId": "guid", "recipeName": "Silpancho", "rations": 1 } ] } ]
 ```
 
-- Si el job de MS4 (`resolve-daily-catalog`) no corrió, devuelve `[]` y MS3
-  responde `NO_CALENDARS`. Si MS4 no responde, la orden diaria falla.
+- `menu` es el campo nuevo propuesto a MS4 (rama `feat/active-tomorrow-menu`). Con
+  él, MS3 produce las recetas reales del plan; sin él, usa la estructura simulada.
+- Qué responde la orden diaria de MS3:
+
+| Situación | Respuesta |
+|---|---|
+| MS4 trae calendarios con `menu` | 200 con las recetas y raciones reales |
+| MS4 trae calendarios sin `menu` y el plan no tiene estructura simulada | **422 `NO_RECIPES`**, mensaje claro, sin crear la orden |
+| El job de MS4 (`resolve-daily-catalog`) no corrió: `[]` | 404 `NO_CALENDARS` |
+| MS4 no responde | 500 |
 
 ### Eventos que MS3 publica
 
@@ -250,12 +261,13 @@ rechazarlo o geocodificar la dirección.
 | Fila `CreateSchedule` pendiente para siempre | Identity o MS4 no están levantados, o `ms3-service` no existe | Correr `start-stack` (crea la cuenta); revisar `docker logs nur-tricenter-contracting-workerservice` |
 | Fila `CreateSchedule` en `Rejected` | MS4 respondió 400/422: duración distinta de 15/30 o plan no proyectado en MS4 | Usar un plan de 15 o 30 días; el log del worker trae el detalle de MS4 |
 | Orden diaria con error 500 en la plataforma | MS4 no responde a `active-tomorrow` | Levantar MS4; sin MS4, probar en standalone |
+| Orden diaria responde 422 `NO_RECIPES` | MS4 no envía `menu` (sin el cambio de `feat/active-tomorrow-menu`) y el plan es real de MS2 | Levantar MS4 con esa rama; la orden se arma con su menú |
 
 ## Resultados de la verificación (2026-10-23 y 2026-10-24)
 
 | Prueba | Resultado |
 |---|---|
-| `dotnet test` de la solución | 185 pruebas OK |
+| `dotnet test` de la solución | 191 pruebas OK |
 | Standalone: plan y receta de MS2 → proyecciones | OK; duplicado con el mismo `Id` descartado |
 | Standalone: validación de paquete → `ms5.package-validated` | OK |
 | Broker caído durante el pago | La fila quedó `Simulated` y se publicó sola ~16 s después de levantar RabbitMQ; los consumidores se reconectaron |
@@ -264,4 +276,9 @@ rechazarlo o geocodificar la dirección.
 | Plataforma: `demo-eventos.ps1` vía gateway (`:15005/api/contracting`) | OK de punta a punta; `PackageValidated` llega con dirección, tracking y coordenadas |
 | MS3 en contenedores contra un MS4 e identity falsos (Node, mismas rutas del gateway) | Login de `ms3-service`; `POST /schedule` con `duration: 30` y `startDate` del día siguiente → `Published`; orden diaria, etiqueta y validación con `active-tomorrow`; `PackageValidated` con las coordenadas de MS4 |
 | Plan de MS2 de 7 días | MS4 respondió 422 y la fila quedó `Rejected`, sin reintentos |
-| MS4 real | Pendiente: no compila sin `NUGET_TOKEN` (kernel privado) |
+| Plataforma completa real (2026-10-24): catálogo, identity, MS4, MS5, gateway y MS3, con el kernel 1.1.0 compilado localmente | 14 contenedores sanos y 5 servicios en Consul; `start-stack` creó `ms4-service` y `ms3-service` |
+| Real: MS2 → MS3 | El plan sembrado por el catálogo ("Plan Comidas Bolivianas 30 Dias") y sus recetas aparecieron solos en MS3 |
+| Real: pago → MS4 | `POST /schedule` creó el calendario 1: plan de MS2, 30 días desde el día siguiente al pago; fila `Published` |
+| Real: MS4 → MS3 con `menu` | Tras `resolve-daily-catalog`, la orden diaria de MS3 salió con las recetas reales del día (Api con Pastel x2, Silpancho, Arroz con Leche, Sopa de Quinua x2) |
+| Real: paquete → MS5 | `PackageValidated` en `ms5.package-validated` con la dirección y coordenadas de MS4 (`Av. Banzer 123, Santa Cruz`, -17.78/-63.18) |
+| Sin `menu` (MS4 sin el cambio) | Con MS4 real sin el cambio, la orden diaria fallaba con 500. Con el arreglo responde 422 `NO_RECIPES` (verificado con `DailyOrderSinRecetasTests`, no en vivo) |

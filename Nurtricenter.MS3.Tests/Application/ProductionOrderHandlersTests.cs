@@ -138,4 +138,82 @@ public sealed class GetDailyOrderQueryHandlerTests
         result.Value!.RecipesSummary.Should().Contain(r => r.RecipeId == recetaConocida && r.RecipeName == "Sopa de quinua");
         result.Value.RecipesSummary.Should().Contain(r => r.RecipeId == recetaDesconocida && r.RecipeName == "Recipe-abcdef12");
     }
+
+    [Fact]
+    public async Task Handle_arma_la_orden_con_el_menu_de_MS4_sin_consultar_la_estructura_del_plan()
+    {
+        _repository
+            .Setup(r => r.GetByProductionDateAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DailyProductionOrder?)null);
+        var sopa = Guid.NewGuid();
+        var majadito = Guid.NewGuid();
+        var menu = new List<SimMenuItem>
+        {
+            new("Almuerzo", sopa, "Sopa de mani", 2),
+            new("Cena", majadito, "Majadito", 1)
+        };
+        _simulation
+            .Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>()))
+            .Returns(new List<SimActiveCalendar>
+            {
+                new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Av. Banzer 123", -17.78, -63.18, "10:00", menu),
+                new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Calle 5", -17.79, -63.19, "", menu)
+            });
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+
+        var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.RecipesSummary.Should().Contain(r => r.RecipeId == sopa && r.RecipeName == "Sopa de mani" && r.TotalPortionsRequired == 4);
+        result.Value.RecipesSummary.Should().Contain(r => r.RecipeId == majadito && r.RecipeName == "Majadito" && r.TotalPortionsRequired == 2);
+        result.Value.TotalPackagesToAssemble.Should().Be(6);
+        _simulation.Verify(s => s.GetPlanStructures(It.IsAny<List<Guid>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_combina_menu_de_MS4_y_estructura_simulada_cuando_solo_algunos_calendarios_traen_menu()
+    {
+        _repository
+            .Setup(r => r.GetByProductionDateAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DailyProductionOrder?)null);
+        var planSimulado = Guid.NewGuid();
+        var recetaSimulada = Guid.NewGuid();
+        var recetaDeMs4 = Guid.NewGuid();
+        _simulation
+            .Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>()))
+            .Returns(new List<SimActiveCalendar>
+            {
+                new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Av. Banzer 123", -17.78, -63.18, "", new List<SimMenuItem> { new("Almuerzo", recetaDeMs4, "Locro", 1) }),
+                new(Guid.NewGuid(), Guid.NewGuid(), planSimulado, "Calle 5", -17.79, -63.19, "")
+            });
+        _simulation
+            .Setup(s => s.GetPlanStructures(It.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] == planSimulado)))
+            .Returns(new List<SimPlanStructure> { new(planSimulado, new List<SimMealBlock> { new("cena", recetaSimulada) }) });
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+
+        var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
+
+        result.Value!.RecipesSummary.Select(r => r.RecipeId).Should().BeEquivalentTo(new[] { recetaDeMs4, recetaSimulada });
+    }
+
+    [Fact]
+    public async Task Handle_devuelve_NO_RECIPES_y_no_persiste_cuando_ningun_calendario_tiene_recetas_conocidas()
+    {
+        _repository
+            .Setup(r => r.GetByProductionDateAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DailyProductionOrder?)null);
+        _simulation
+            .Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>()))
+            .Returns(new List<SimActiveCalendar> { new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Av. Banzer 123", -17.78, -63.18, "") });
+        _simulation
+            .Setup(s => s.GetPlanStructures(It.IsAny<List<Guid>>()))
+            .Returns(new List<SimPlanStructure>());
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+
+        var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("NO_RECIPES");
+        _repository.Verify(r => r.AddAsync(It.IsAny<DailyProductionOrder>()), Times.Never);
+    }
 }

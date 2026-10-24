@@ -109,10 +109,24 @@ y la validación de paquetes. La respuesta de MS4 se traduce al modelo de MS3:
 | `patientId`, `planId` | iguales |
 | `address`, `latitude`, `longitude` | iguales |
 | `hour` | `DeliveryTime` (`HH:mm`, vacío si es `null`) |
+| `menu` (`mealTime`, `mealTimeOrder`, `recipeId`, `recipeName`, `rations`) | `Menu` (`SimMenuItem`: tiempo de comida, receta, nombre, raciones), ordenado por `mealTimeOrder` |
+
+`menu` es la foto del menú del día que MS4 toma en `resolve-daily-catalog`
+consultando a MS2. Es un campo **nuevo** que MS3 le propone a MS4 (rama
+`feat/active-tomorrow-menu` de `ms4-delivery-schedule-management`). Sin él, MS3 no
+sabe qué recetas lleva un plan real de MS2, porque la composición del plan solo la
+tiene MS2 y MS4 ya la resolvió.
+
+La orden diaria (`GetDailyOrderQueryHandler`) arma sus ítems así:
+
+1. Si el calendario trae `menu`, suma `rations` por receta con el nombre que vino de MS4.
+2. Si no lo trae (MS4 sin el cambio, o standalone), usa la estructura simulada del plan.
+3. Si con eso no hay ninguna receta, responde **422 `NO_RECIPES`** con un mensaje
+   claro y no crea la orden. Antes era un 500 por la excepción del dominio.
 
 Si MS4 no responde, la orden diaria devuelve error: no hay forma honesta de
 producir sin saber qué entregar. Si el job de MS4 no corrió, `active-tomorrow`
-devuelve `[]` y la orden responde `NO_CALENDARS`.
+devuelve `[]` y la orden responde 404 `NO_CALENDARS`.
 
 ## MS3 → MS5: evento `package-validated`
 

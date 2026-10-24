@@ -20,6 +20,9 @@ public sealed class DeliveryCalendarClientTests
 
         public HttpStatusCode RespuestaSchedule { get; set; } = HttpStatusCode.OK;
 
+        public string RespuestaActiveTomorrow { get; set; } =
+            "[{\"packId\":101,\"patientId\":\"00000000-0000-0000-0000-000000000001\",\"planId\":\"10000000-0000-0000-0000-000000000001\",\"hour\":\"10:30:00\",\"address\":\"Av. Banzer 123\",\"latitude\":-17.78,\"longitude\":-63.18}]";
+
         public int Logins { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -31,8 +34,7 @@ public sealed class DeliveryCalendarClientTests
             {
                 "/api/identity-service/v1/auth/login" => Json(HttpStatusCode.OK, $"{{\"accessToken\":\"token-ms3-{++Logins}\",\"expiresIn\":3600}}"),
                 "/api/delivery-calendar/v1/schedule" => Json(RespuestaSchedule, "{\"calendarId\":7,\"days\":[]}"),
-                "/api/delivery-calendar/v1/calendars/active-tomorrow" => Json(HttpStatusCode.OK,
-                    "[{\"packId\":101,\"patientId\":\"00000000-0000-0000-0000-000000000001\",\"planId\":\"10000000-0000-0000-0000-000000000001\",\"hour\":\"10:30:00\",\"address\":\"Av. Banzer 123\",\"latitude\":-17.78,\"longitude\":-63.18}]"),
+                "/api/delivery-calendar/v1/calendars/active-tomorrow" => Json(HttpStatusCode.OK, RespuestaActiveTomorrow),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         }
@@ -154,6 +156,41 @@ public sealed class DeliveryCalendarClientTests
         entrega.Hour.Should().Be(new TimeOnly(10, 30));
         entrega.Address.Should().Be("Av. Banzer 123");
         entrega.Latitude.Should().Be(-17.78);
+        entrega.Menu.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetActiveTomorrowAsync_lee_el_menu_del_dia_cuando_MS4_lo_envia()
+    {
+        var (proveedor, plataforma) = Construir();
+        plataforma.RespuestaActiveTomorrow =
+            "[{\"packId\":101,\"patientId\":\"00000000-0000-0000-0000-000000000001\",\"planId\":\"10000000-0000-0000-0000-000000000001\",\"hour\":null,\"address\":\"Av. Banzer 123\",\"latitude\":-17.78,\"longitude\":-63.18," +
+            "\"menu\":[{\"mealTime\":\"Cena\",\"mealTimeOrder\":2,\"recipeId\":\"20000000-0000-0000-0000-000000000009\",\"recipeName\":\"Majadito\",\"rations\":1}," +
+            "{\"mealTime\":\"Almuerzo\",\"mealTimeOrder\":1,\"recipeId\":\"20000000-0000-0000-0000-000000000008\",\"recipeName\":\"Sopa de mani\",\"rations\":2}]}]";
+        var cliente = proveedor.GetRequiredService<IDeliveryCalendarClient>();
+
+        var entrega = (await cliente.GetActiveTomorrowAsync(new DateOnly(2026, 11, 2))).Should().ContainSingle().Subject;
+
+        entrega.Menu.Should().HaveCount(2);
+        entrega.Menu!.Should().Contain(m => m.RecipeName == "Sopa de mani" && m.Rations == 2 && m.MealTimeOrder == 1);
+    }
+
+    [Fact]
+    public void DeliveryCalendarSimulationService_traduce_el_menu_ordenado_por_tiempo_de_comida()
+    {
+        var ms4 = new CalendarioEnMemoria();
+        ms4.EntregasDeManana.Add(new ActiveDelivery(101, Guid.NewGuid(), Guid.NewGuid(), null, "Av. Banzer 123", -17.78, -63.18,
+        [
+            new ActiveDeliveryMenuItem("Cena", 2, Guid.NewGuid(), "Majadito", 1),
+            new ActiveDeliveryMenuItem("Almuerzo", 1, Guid.NewGuid(), "Sopa de mani", 2)
+        ]));
+        var servicio = new DeliveryCalendarSimulationService(new SimulationDataService(), ms4);
+
+        var calendario = servicio.GetActiveCalendars(new DateTime(2026, 11, 2)).Should().ContainSingle().Subject;
+
+        calendario.Menu!.Select(m => m.RecipeName).Should().Equal("Sopa de mani", "Majadito");
+        calendario.Menu![0].Rations.Should().Be(2);
+        calendario.DeliveryTime.Should().BeEmpty();
     }
 
     [Fact]
