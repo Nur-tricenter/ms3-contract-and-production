@@ -60,6 +60,7 @@ services:
       RabbitMqSettings__MaxRetryAttempts: "3"
       RabbitMqSettings__RetryBaseDelayMilliseconds: "500"
       Outbox__PollingIntervalSeconds: "5"
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: "Warning"
     networks: [nur-tricenter-net]
     depends_on:
       db:

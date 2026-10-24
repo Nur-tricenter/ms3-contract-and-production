@@ -113,7 +113,11 @@ public sealed class OutboxRelay
             PatientId = payload.PatientId,
             ProductionOrderId = payload.ProductionOrderId,
             CatalogPlanId = payload.CatalogPlanId,
-            ReleasedAt = payload.ReleasedAt
+            ReleasedAt = payload.ReleasedAt,
+            DeliveryAddress = payload.DeliveryAddress ?? string.Empty,
+            TrackingNumber = payload.TrackingNumber ?? string.Empty,
+            Latitude = payload.Latitude,
+            Longitude = payload.Longitude
         };
     }
 
@@ -126,5 +130,14 @@ public sealed class OutboxRelay
 
     private sealed record CreateSchedulePayload(Guid ContractId, Guid PatientId, Guid CatalogPlanId, string InvoiceNumber, decimal TotalAmount);
 
-    private sealed record TransferToLogisticsPayload(Guid PackageId, Guid PatientId, Guid ProductionOrderId, Guid CatalogPlanId, DateTime ReleasedAt);
+    private sealed record TransferToLogisticsPayload(
+        Guid PackageId,
+        Guid PatientId,
+        Guid ProductionOrderId,
+        Guid CatalogPlanId,
+        DateTime ReleasedAt,
+        string? DeliveryAddress,
+        string? TrackingNumber,
+        double? Latitude,
+        double? Longitude);
 }

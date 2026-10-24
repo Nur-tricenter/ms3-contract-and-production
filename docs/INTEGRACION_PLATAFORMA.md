@@ -61,13 +61,45 @@ Ejemplo de cuerpo publicado (`ContractActivated`):
 }
 ```
 
+Ejemplo de cuerpo publicado (`PackageValidated`), pensado para que MS5 cree la
+entrega sin otra consulta (`POST /api/v1/packages/deliveries` de MS5 pide
+dirección y coordenadas):
+
+```json
+{
+  "EventType": "Package.Validated",
+  "PackageId": "9b2e…",
+  "PatientId": "00000000-0000-0000-0000-000000000001",
+  "ProductionOrderId": "4d1a…",
+  "CatalogPlanId": "10000000-0000-0000-0000-000000000001",
+  "ReleasedAt": "2026-10-23T15:30:00Z",
+  "DeliveryAddress": "Av. Las Flores #123",
+  "TrackingNumber": "NTR-9B2E41C0-20261023",
+  "Latitude": -12.0464,
+  "Longitude": -77.0428,
+  "Id": "<id de la fila del outbox>",
+  "CreatedAt": "2026-10-23T15:30:00+00:00",
+  "CorrelationId": "<id de la fila del outbox>",
+  "Source": "contracting"
+}
+```
+
+- `DeliveryAddress` y `TrackingNumber` salen de la etiqueta del paquete.
+- `Latitude`/`Longitude` salen del calendario activo de MS4 (hoy simulado) del
+  mismo paciente cuya dirección coincide con la de la etiqueta. Si ninguno
+  coincide, van en `null`.
+- Las filas del outbox anteriores a este cambio se publican con dirección y
+  tracking vacíos y coordenadas `null`.
+
 El `Id` del mensaje es el `Id` de la fila del outbox: si el worker se cae entre
 publicar y marcar la fila, la republicación lleva el mismo `Id` y el inbox del
 consumidor la descarta.
 
 ## Ciclo de vida de una fila del outbox
 
-Los handlers no cambiaron: siguen guardando la fila con estado `Simulated`. Ese
+Los handlers siguen guardando la fila con estado `Simulated`; el único cambio
+es que `ApproveQualityCommandHandler` agrega dirección, tracking y coordenadas al
+payload de `TransferToLogistics`. Ese
 estado ahora significa *pendiente de publicar* (`OutgoingIntegrationEvent.PendingStatus`).
 
 ```

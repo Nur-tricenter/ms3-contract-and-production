@@ -70,6 +70,7 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=nur_tricenter_contracting;Username=dev-only;Password=dev-only-password"
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: "Warning"
       RabbitMqSettings__Host: "rabbitmq"
       RabbitMqSettings__UserName: "guest"
       RabbitMqSettings__Password: "guest"

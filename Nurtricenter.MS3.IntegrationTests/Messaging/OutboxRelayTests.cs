@@ -86,7 +86,11 @@ public sealed class OutboxRelayTests : IDisposable
             ProductionOrderId = ordenId,
             CatalogPlanId = Guid.NewGuid(),
             status = "validatedAndReleased",
-            releasedAt = liberadoEn
+            releasedAt = liberadoEn,
+            deliveryAddress = "Av. Las Flores #123",
+            trackingNumber = "NTR-ABCD1234-20261023",
+            latitude = -12.0464,
+            longitude = -77.0428
         });
 
         await EjecutarRelayAsync();
@@ -98,7 +102,33 @@ public sealed class OutboxRelayTests : IDisposable
         paquete.PackageId.Should().Be(paqueteId);
         paquete.ProductionOrderId.Should().Be(ordenId);
         paquete.ReleasedAt.Should().Be(liberadoEn);
+        paquete.DeliveryAddress.Should().Be("Av. Las Flores #123");
+        paquete.TrackingNumber.Should().Be("NTR-ABCD1234-20261023");
+        paquete.Latitude.Should().Be(-12.0464);
+        paquete.Longitude.Should().Be(-77.0428);
         (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
+    }
+
+    [Fact]
+    public async Task Relay_publica_PackageValidated_de_filas_antiguas_sin_direccion_ni_coordenadas()
+    {
+        await RegistrarEventoAsync("TransferToLogistics", "MS5", new
+        {
+            packageId = Guid.NewGuid(),
+            PatientId = Guid.NewGuid(),
+            ProductionOrderId = Guid.NewGuid(),
+            CatalogPlanId = Guid.NewGuid(),
+            status = "validatedAndReleased",
+            releasedAt = DateTime.UtcNow
+        });
+
+        await EjecutarRelayAsync();
+
+        var paquete = _broker.Publicados.Should().ContainSingle().Subject.Item1.Should().BeOfType<PackageValidated>().Subject;
+        paquete.DeliveryAddress.Should().BeEmpty();
+        paquete.TrackingNumber.Should().BeEmpty();
+        paquete.Latitude.Should().BeNull();
+        paquete.Longitude.Should().BeNull();
     }
 
     [Fact]
