@@ -5,6 +5,7 @@ using MediatR;
 using Nurtricenter.MS3.Application.Commands;
 using Nurtricenter.MS3.Application.Dtos.Billing;
 using Nurtricenter.MS3.Application.Interfaces;
+using Nurtricenter.MS3.Application.Simulations;
 using Nurtricenter.MS3.Core.Simulations;
 
 namespace Nurtricenter.MS3.Application.Handlers;
@@ -14,15 +15,18 @@ public sealed class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymen
     private readonly IContractRepository _contractRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IOutgoingEventRepository _outgoingEvents;
+    private readonly ISimulationService _sim;
 
     public ProcessPaymentCommandHandler(
         IContractRepository contractRepository,
         IUnitOfWork unitOfWork,
-        IOutgoingEventRepository outgoingEvents)
+        IOutgoingEventRepository outgoingEvents,
+        ISimulationService sim)
     {
         _contractRepository = contractRepository;
         _unitOfWork = unitOfWork;
         _outgoingEvents = outgoingEvents;
+        _sim = sim;
     }
 
     public async Task<Result<PaymentResponse>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
@@ -35,14 +39,16 @@ public sealed class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymen
         var invoice = contract.ProcessPayment(request.Amount, request.InvoiceNumber);
         await _unitOfWork.CommitAsync(cancellationToken);
 
-        // Simulate MS4: create delivery calendar
+        var plan = _sim.GetPlan(contract.CatalogPlanId);
         var payload = JsonSerializer.Serialize(new
         {
             contractId = contract.Id,
             contract.PatientId,
             contract.CatalogPlanId,
             invoice.InvoiceNumber,
-            invoice.TotalAmount
+            invoice.TotalAmount,
+            durationDays = plan?.DurationDays,
+            startDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1))
         });
 
         await _outgoingEvents.AddAsync(

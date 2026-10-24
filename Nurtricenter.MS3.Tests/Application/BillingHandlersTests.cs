@@ -19,6 +19,7 @@ public sealed class ProcessPaymentCommandHandlerTests
     private readonly Mock<IContractRepository> _repository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IOutgoingEventRepository> _outgoingEvents = new();
+    private readonly Mock<ISimulationService> _simulation = new();
 
     [Fact]
     public async Task Handle_pays_contract_and_emits_schedule_event_to_ms4()
@@ -30,7 +31,7 @@ public sealed class ProcessPaymentCommandHandlerTests
             .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
             .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
             .Returns(Task.CompletedTask);
-        var handler = new ProcessPaymentCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object);
+        var handler = new ProcessPaymentCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _simulation.Object);
 
         var result = await handler.Handle(
             new ProcessPaymentCommand(contract.Id, 1500m, "INV-2026-001"), CancellationToken.None);
@@ -47,12 +48,51 @@ public sealed class ProcessPaymentCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_incluye_la_duracion_del_plan_y_el_dia_siguiente_como_inicio_del_calendario()
+    {
+        var planId = Guid.NewGuid();
+        var contract = Contract.Create(Guid.NewGuid(), planId);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(contract);
+        _simulation.Setup(s => s.GetPlan(planId)).Returns(new SimPlan(planId, "Plan Mensual", 550m, 30));
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+        var handler = new ProcessPaymentCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _simulation.Object);
+
+        await handler.Handle(new ProcessPaymentCommand(contract.Id, 550m, "INV-2026-010"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("durationDays").GetInt32().Should().Be(30);
+        payload.RootElement.GetProperty("startDate").GetString().Should().Be(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)).ToString("yyyy-MM-dd"));
+    }
+
+    [Fact]
+    public async Task Handle_deja_la_duracion_nula_cuando_el_plan_no_se_conoce()
+    {
+        var contract = Contract.Create(Guid.NewGuid(), Guid.NewGuid());
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(contract);
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+        var handler = new ProcessPaymentCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _simulation.Object);
+
+        await handler.Handle(new ProcessPaymentCommand(contract.Id, 550m, "INV-2026-011"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("durationDays").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task Handle_propagates_when_contract_already_paid()
     {
         var contract = Contract.Create(Guid.NewGuid(), Guid.NewGuid());
         contract.ProcessPayment(1500m, "INV-2026-001");
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(contract);
-        var handler = new ProcessPaymentCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object);
+        var handler = new ProcessPaymentCommandHandler(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _simulation.Object);
 
         var act = () => handler.Handle(
             new ProcessPaymentCommand(contract.Id, 1500m, "INV-2026-002"), CancellationToken.None);

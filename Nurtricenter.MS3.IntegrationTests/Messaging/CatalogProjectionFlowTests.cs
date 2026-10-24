@@ -10,7 +10,6 @@ using Nurtricenter.MS3.Core.Simulations;
 using Nurtricenter.MS3.Infrastructure.Data;
 using Nurtricenter.MS3.Infrastructure.Data.ReadModels;
 using Nurtricenter.MS3.Infrastructure.Messaging;
-using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Contracting;
 
 namespace Nurtricenter.MS3.IntegrationTests.Messaging;
 
@@ -61,7 +60,7 @@ public sealed class CatalogProjectionFlowTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Flujo_contrato_pago_y_relay_publica_ContractActivated_con_el_plan_proyectado()
+    public async Task Flujo_contrato_pago_y_relay_crea_el_calendario_en_MS4_con_la_duracion_del_plan_proyectado()
     {
         var client = _factory.CreateApiClient();
         var planId = await ProyectarPlanDelCatalogoAsync("Plan Proteico");
@@ -72,24 +71,21 @@ public sealed class CatalogProjectionFlowTests : IClassFixture<ApiFactory>
         var cobro = await client.PostAsJsonAsync("/api/v1/billing/charge-plan", new ProcessPaymentRequest(contrato!.Id, 480.00m, numeroFactura));
         cobro.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var broker = new BrokerEnMemoria();
+        var ms4 = new CalendarioEnMemoria();
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            await new OutboxRelay(db, broker, NullLogger<OutboxRelay>.Instance).PublishPendingAsync();
+            await new OutboxRelay(db, new BrokerEnMemoria(), ms4, NullLogger<OutboxRelay>.Instance).PublishPendingAsync();
         }
 
-        var publicado = broker.Publicados
-            .Select(p => p.Mensaje)
-            .OfType<ContractActivated>()
-            .Should().ContainSingle(m => m.ContractId == contrato.Id).Subject;
-        publicado.CatalogPlanId.Should().Be(planId);
-        publicado.PatientId.Should().Be(PacienteJuanPerez);
-        publicado.InvoiceNumber.Should().Be(numeroFactura);
-        publicado.TotalAmount.Should().Be(480.00m);
+        var calendario = ms4.CalendariosCreados.Should().ContainSingle(c => c.ContractId == contrato.Id).Subject;
+        calendario.PlanId.Should().Be(planId);
+        calendario.PatientId.Should().Be(PacienteJuanPerez);
+        calendario.Duration.Should().Be(30);
+        calendario.StartDate.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)));
 
         var estado = await _factory.QueryDbAsync(db => db.OutgoingIntegrationEvents
-            .Where(e => e.Id == publicado.Id)
+            .Where(e => e.EventType == "CreateSchedule" && e.Payload.Contains(contrato.Id.ToString()))
             .Select(e => e.Status)
             .SingleAsync());
         estado.Should().Be(OutgoingIntegrationEvent.PublishedStatus);

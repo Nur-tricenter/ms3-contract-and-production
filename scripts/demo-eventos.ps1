@@ -1,6 +1,6 @@
 # Recorre los eventos de MS3 de punta a punta contra un stack ya levantado:
 #   1. Simula a MS2 publicando un plan y una receta en RabbitMQ.
-#   2. Crea un contrato con ese plan y lo paga  -> ContractActivated en ms4.contract-activated
+#   2. Crea un contrato con ese plan y lo paga  -> POST /schedule a MS4 (REST, desde el outbox)
 #   3. Arma, etiqueta y valida un paquete      -> PackageValidated  en ms5.package-validated
 #
 # Standalone (docker compose up --build en la raíz del repo):
@@ -87,13 +87,18 @@ Write-Host "    paquete $($paquete.packageId) validado: $($validacion.validatedC
 Write-Host "`n[4] Esperando $EsperaSegundos s a que el worker drene el outbox ..." -ForegroundColor Cyan
 Start-Sleep -Seconds $EsperaSegundos
 
-$activado = Leer-Cola 'ms4.contract-activated' | Where-Object { $_.ContractId -eq $contrato.id }
+$filaMs4 = (Api Get '/v1/sim/outgoing/CreateSchedule') | ForEach-Object { $_ } | Where-Object { $_.payload -like "*$($contrato.id)*" } | Select-Object -First 1
 $validado = Leer-Cola 'ms5.package-validated' | Where-Object { $_.PackageId -eq $paquete.packageId }
 
-Write-Host "`n[5] Lo que recibiria MS4 (ms4.contract-activated)" -ForegroundColor Green
-if ($activado) { $activado | ConvertTo-Json } else { Write-Host '    NO LLEGO' -ForegroundColor Red }
+Write-Host "`n[5] Calendario en MS4 (fila CreateSchedule del outbox)" -ForegroundColor Green
+switch ($filaMs4.status) {
+    'Published'  { Write-Host "    Published: MS4 creo el calendario (POST /schedule respondio 200)" }
+    'Unroutable' { Write-Host "    Unroutable: MS4 no esta configurado (modo standalone)" -ForegroundColor Yellow }
+    'Rejected'   { Write-Host "    Rejected: MS4 rechazo el calendario (duracion distinta de 15/30 o plan desconocido)" -ForegroundColor Red }
+    default      { Write-Host "    Pendiente: MS4 o identity no respondieron todavia; el worker reintenta" -ForegroundColor Red }
+}
 Write-Host "`n[6] Lo que recibiria MS5 (ms5.package-validated)" -ForegroundColor Green
 if ($validado) { $validado | ConvertTo-Json } else { Write-Host '    NO LLEGO' -ForegroundColor Red }
 
-if (-not $activado -or -not $validado) { exit 1 }
+if (-not $validado -or $filaMs4.status -notin @('Published', 'Unroutable')) { exit 1 }
 Write-Host "`nOK: MS3 consumio de MS2 y publico hacia MS4 y MS5." -ForegroundColor Green
