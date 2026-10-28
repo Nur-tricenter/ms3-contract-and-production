@@ -22,7 +22,10 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Host=nur-tricenter-postgres;Port=5432;Database=nur_tricenter_contracting;Username=dev-only;Password=dev-only-password"
       Migrations__ApplyOnStartup: "true"
-      Seed__Enabled: "true"
+      # Sin datos de ejemplo en la plataforma: el seed crea una orden de producción para mañana
+      # con paquetes y contratos pagados que MS4 no conoce. Con esa orden, daily-order no consulta
+      # a MS4 y los paquetes sembrados salen hacia MS5 sin calendario detrás.
+      Seed__Enabled: "false"
       Swagger__Enabled: "false"
       ServiceRegistration__ServiceDiscoveryAddress: "http://nur-tricenter-consul:8500"
       ServiceRegistration__ServiceName: "contracting"
