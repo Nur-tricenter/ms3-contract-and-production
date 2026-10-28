@@ -4,6 +4,7 @@ using MediatR;
 using Nurtricenter.MS3.Application.Commands;
 using Nurtricenter.MS3.Application.Dtos.Production;
 using Nurtricenter.MS3.Application.Interfaces;
+using Nurtricenter.MS3.Core.Enums;
 
 namespace Nurtricenter.MS3.Api.Endpoints.Production;
 
@@ -60,6 +61,15 @@ public sealed class ValidatePackageEndpoint : Endpoint<ApproveQualityRequest, Va
         var results = new List<PackageValidationResult>();
         foreach (var package in packages)
         {
+            // Un paquete ya validado en una pasada anterior cuenta como éxito y no se vuelve a
+            // aprobar: hacerlo lanzaba una excepción (500) y además duplicaría su TransferToLogistics.
+            // Así se puede validar de nuevo la orden cuando se le agregan paquetes después.
+            if (package.Status == PackageStatus.Validated)
+            {
+                results.Add(new PackageValidationResult(package.Id, true, null));
+                continue;
+            }
+
             var command = new ApproveQualityCommand(package.Id, req.SupervisorId);
             var result = await _mediator.Send(command, ct);
 
