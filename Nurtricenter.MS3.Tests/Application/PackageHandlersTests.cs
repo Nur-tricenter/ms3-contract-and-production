@@ -10,6 +10,7 @@ using Nurtricenter.MS3.Application.Simulations.Models;
 using Nurtricenter.MS3.Core.Aggregates;
 using Nurtricenter.MS3.Core.Enums;
 using Nurtricenter.MS3.Core.Simulations;
+using Nurtricenter.MS3.Core.ValueObjects;
 
 namespace Nurtricenter.MS3.Tests.Application;
 
@@ -156,10 +157,53 @@ public sealed class ApproveQualityCommandHandlerTests
     private readonly Mock<IPackageRepository> _repository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IOutgoingEventRepository> _outgoingEvents = new();
+    private readonly Mock<IDailyProductionOrderRepository> _productionOrders = new();
     private readonly Mock<ISimulationService> _simulation = new();
 
     private ApproveQualityCommandHandler CreateHandler()
-        => new(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _simulation.Object);
+        => new(_repository.Object, _unitOfWork.Object, _outgoingEvents.Object, _productionOrders.Object, _simulation.Object);
+
+    [Fact]
+    public async Task Handle_incluye_nombre_del_paciente_y_fecha_de_entrega_de_la_orden_en_el_evento_a_ms5()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
+        var productionDate = new DateTime(2026, 11, 5);
+        var order = DailyProductionOrder.ConsolidateOrder(productionDate, [new ProductionItem(Guid.NewGuid(), "Receta", 1)]);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _productionOrders.Setup(r => r.GetByIdAsync(package.ProductionOrderId, It.IsAny<bool>())).ReturnsAsync(order);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns([]);
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+
+        await CreateHandler().Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("patientName").GetString().Should().Be("María López");
+        payload.RootElement.GetProperty("deliveryDate").GetString().Should().Be("2026-11-05");
+        _simulation.Verify(s => s.GetActiveCalendars(productionDate), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_usa_manana_como_fecha_de_entrega_cuando_la_orden_no_existe()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns([]);
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+
+        await CreateHandler().Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("deliveryDate").GetString()
+            .Should().Be(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)).ToString("yyyy-MM-dd"));
+    }
 
     [Fact]
     public async Task Handle_incluye_direccion_tracking_y_coordenadas_del_calendario_en_el_evento_a_ms5()

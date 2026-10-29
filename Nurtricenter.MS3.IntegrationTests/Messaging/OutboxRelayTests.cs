@@ -137,10 +137,12 @@ public sealed class OutboxRelayTests : IDisposable
         {
             packageId = paqueteId,
             PatientId = Guid.NewGuid(),
+            patientName = "Juan Perez",
             ProductionOrderId = ordenId,
             CatalogPlanId = Guid.NewGuid(),
             status = "validatedAndReleased",
             releasedAt = liberadoEn,
+            deliveryDate = new DateOnly(2026, 10, 24),
             deliveryAddress = "Av. Las Flores #123",
             trackingNumber = "NTR-ABCD1234-20261023",
             latitude = -12.0464,
@@ -156,8 +158,10 @@ public sealed class OutboxRelayTests : IDisposable
         paquete.Id.Should().Be(evento.Id);
         paquete.Source.Should().Be("contracting");
         paquete.PackageId.Should().Be(paqueteId);
+        paquete.PatientName.Should().Be("Juan Perez");
         paquete.ProductionOrderId.Should().Be(ordenId);
         paquete.ReleasedAt.Should().Be(liberadoEn);
+        paquete.DeliveryDate.Should().Be(new DateOnly(2026, 10, 24));
         paquete.DeliveryAddress.Should().Be("Av. Las Flores #123");
         paquete.TrackingNumber.Should().Be("NTR-ABCD1234-20261023");
         paquete.Latitude.Should().Be(-12.0464);
