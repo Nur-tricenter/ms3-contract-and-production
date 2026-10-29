@@ -14,17 +14,20 @@ public sealed class ApproveQualityCommandHandler : IRequestHandler<ApproveQualit
     private readonly IPackageRepository _packageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IOutgoingEventRepository _outgoingEvents;
+    private readonly IDailyProductionOrderRepository _productionOrders;
     private readonly ISimulationService _sim;
 
     public ApproveQualityCommandHandler(
         IPackageRepository packageRepository,
         IUnitOfWork unitOfWork,
         IOutgoingEventRepository outgoingEvents,
+        IDailyProductionOrderRepository productionOrders,
         ISimulationService sim)
     {
         _packageRepository = packageRepository;
         _unitOfWork = unitOfWork;
         _outgoingEvents = outgoingEvents;
+        _productionOrders = productionOrders;
         _sim = sim;
     }
 
@@ -38,18 +41,24 @@ public sealed class ApproveQualityCommandHandler : IRequestHandler<ApproveQualit
         package.ApproveQualityControl(request.SupervisorId);
         await _unitOfWork.CommitAsync(cancellationToken);
 
+        // The package is delivered on its production order's date; MS5 assigns it to that day's route.
+        var productionOrder = await _productionOrders.GetByIdAsync(package.ProductionOrderId, true);
+        var deliveryDate = productionOrder?.ProductionDate.Date ?? DateTime.UtcNow.AddDays(1).Date;
+
         var deliveryAddress = package.Label?.DeliveryAddress;
-        var calendar = _sim.GetActiveCalendars(DateTime.UtcNow.AddDays(1).Date)
+        var calendar = _sim.GetActiveCalendars(deliveryDate)
             .FirstOrDefault(c => c.PatientId == package.PatientId && c.Address == deliveryAddress);
 
         var payload = JsonSerializer.Serialize(new
         {
             packageId = package.Id,
             package.PatientId,
+            patientName = package.Label?.PatientName,
             package.ProductionOrderId,
             package.CatalogPlanId,
             status = "validatedAndReleased",
             releasedAt = DateTime.UtcNow,
+            deliveryDate = DateOnly.FromDateTime(deliveryDate),
             deliveryAddress,
             trackingNumber = package.Label?.TrackingNumber,
             latitude = calendar?.Latitude,
