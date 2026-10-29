@@ -146,7 +146,8 @@ public sealed class OutboxRelayTests : IDisposable
             deliveryAddress = "Av. Las Flores #123",
             trackingNumber = "NTR-ABCD1234-20261023",
             latitude = -12.0464,
-            longitude = -77.0428
+            longitude = -77.0428,
+            deliveryDayId = 42
         });
 
         await EjecutarRelayAsync();
@@ -166,6 +167,7 @@ public sealed class OutboxRelayTests : IDisposable
         paquete.TrackingNumber.Should().Be("NTR-ABCD1234-20261023");
         paquete.Latitude.Should().Be(-12.0464);
         paquete.Longitude.Should().Be(-77.0428);
+        paquete.DeliveryDayId.Should().Be(42);
         (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
     }
 
@@ -189,6 +191,7 @@ public sealed class OutboxRelayTests : IDisposable
         paquete.TrackingNumber.Should().BeEmpty();
         paquete.Latitude.Should().BeNull();
         paquete.Longitude.Should().BeNull();
+        paquete.DeliveryDayId.Should().BeNull();
     }
 
     [Fact]

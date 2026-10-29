@@ -131,7 +131,8 @@ public sealed class OutboxRelay
             DeliveryAddress = payload.DeliveryAddress ?? string.Empty,
             TrackingNumber = payload.TrackingNumber ?? string.Empty,
             Latitude = payload.Latitude,
-            Longitude = payload.Longitude
+            Longitude = payload.Longitude,
+            DeliveryDayId = payload.DeliveryDayId
         };
     }
 
@@ -155,5 +156,6 @@ public sealed class OutboxRelay
         string? DeliveryAddress,
         string? TrackingNumber,
         double? Latitude,
-        double? Longitude);
+        double? Longitude,
+        int? DeliveryDayId);
 }

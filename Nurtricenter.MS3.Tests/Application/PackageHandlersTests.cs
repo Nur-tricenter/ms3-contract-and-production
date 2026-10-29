@@ -213,7 +213,7 @@ public sealed class ApproveQualityCommandHandlerTests
         _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns(
         [
             new SimActiveCalendar(Guid.NewGuid(), package.PatientId, package.CatalogPlanId, "Otra dirección 999", -1.0, -2.0, "08:00"),
-            new SimActiveCalendar(Guid.NewGuid(), package.PatientId, package.CatalogPlanId, "Av. Principal 123", -17.7688, -63.1827, "10:00")
+            new SimActiveCalendar(Guid.NewGuid(), package.PatientId, package.CatalogPlanId, "Av. Principal 123", -17.7688, -63.1827, "10:00", DeliveryDayId: 42)
         ]);
         OutgoingIntegrationEvent? emitted = null;
         _outgoingEvents
@@ -228,6 +228,7 @@ public sealed class ApproveQualityCommandHandlerTests
         payload.RootElement.GetProperty("trackingNumber").GetString().Should().Be(package.Label!.TrackingNumber);
         payload.RootElement.GetProperty("latitude").GetDouble().Should().Be(-17.7688);
         payload.RootElement.GetProperty("longitude").GetDouble().Should().Be(-63.1827);
+        payload.RootElement.GetProperty("deliveryDayId").GetInt32().Should().Be(42);
     }
 
     [Fact]
@@ -248,6 +249,7 @@ public sealed class ApproveQualityCommandHandlerTests
         payload.RootElement.GetProperty("deliveryAddress").GetString().Should().Be("Av. Principal 123");
         payload.RootElement.GetProperty("latitude").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
         payload.RootElement.GetProperty("longitude").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        payload.RootElement.GetProperty("deliveryDayId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
     }
 
     [Fact]

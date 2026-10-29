@@ -50,5 +50,6 @@ public sealed class DeliveryCalendarSimulationService : ISimulationService
         delivery.Menu?
             .OrderBy(item => item.MealTimeOrder)
             .Select(item => new SimMenuItem(item.MealTime, item.RecipeId, item.RecipeName, item.Rations))
-            .ToList());
+            .ToList(),
+        delivery.PackId);
 }

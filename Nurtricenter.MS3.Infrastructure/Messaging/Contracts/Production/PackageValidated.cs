@@ -26,4 +26,5 @@ public record PackageValidated : IntegrationMessage
     public string TrackingNumber { get; init; } = string.Empty;
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }
+    public int? DeliveryDayId { get; init; }
 }
