@@ -8,7 +8,8 @@ public sealed record SimActiveCalendar(
     double Latitude,
     double Longitude,
     string DeliveryTime,
-    IReadOnlyList<SimMenuItem>? Menu = null
+    IReadOnlyList<SimMenuItem>? Menu = null,
+    int? DeliveryDayId = null // MS4's delivery day (packId); null for the in-memory simulation
 );
 
 public sealed record SimMenuItem(

@@ -204,6 +204,7 @@ public sealed class DeliveryCalendarClientTests
 
         var calendario = calendarios.Should().ContainSingle().Subject;
         calendario.PackageId.Should().Be(DeliveryCalendarSimulationService.PackIdToGuid(101));
+        calendario.DeliveryDayId.Should().Be(101);
         calendario.PatientId.Should().Be(ms4.EntregasDeManana[0].PatientId);
         calendario.Address.Should().Be("Av. Banzer 123");
         calendario.Latitude.Should().Be(-17.78);

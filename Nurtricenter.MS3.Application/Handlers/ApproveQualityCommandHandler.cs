@@ -62,7 +62,8 @@ public sealed class ApproveQualityCommandHandler : IRequestHandler<ApproveQualit
             deliveryAddress,
             trackingNumber = package.Label?.TrackingNumber,
             latitude = calendar?.Latitude,
-            longitude = calendar?.Longitude
+            longitude = calendar?.Longitude,
+            deliveryDayId = calendar?.DeliveryDayId
         });
 
         await _outgoingEvents.AddAsync(
