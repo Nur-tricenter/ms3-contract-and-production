@@ -232,6 +232,29 @@ public sealed class ApproveQualityCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_con_varios_contratos_en_la_misma_direccion_usa_el_dia_del_plan_del_paquete()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns(
+        [
+            new SimActiveCalendar(Guid.NewGuid(), package.PatientId, Guid.NewGuid(), "Av. Principal 123", -17.0, -63.0, "08:00", DeliveryDayId: 1),
+            new SimActiveCalendar(Guid.NewGuid(), package.PatientId, package.CatalogPlanId, "Av. Principal 123", -17.7688, -63.1827, "10:00", DeliveryDayId: 46)
+        ]);
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+
+        await CreateHandler().Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
+
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("deliveryDayId").GetInt32().Should().Be(46);
+        payload.RootElement.GetProperty("latitude").GetDouble().Should().Be(-17.7688);
+    }
+
+    [Fact]
     public async Task Handle_deja_coordenadas_nulas_cuando_ningun_calendario_coincide_con_la_direccion()
     {
         var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);

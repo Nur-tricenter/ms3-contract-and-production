@@ -46,8 +46,12 @@ public sealed class ApproveQualityCommandHandler : IRequestHandler<ApproveQualit
         var deliveryDate = productionOrder?.ProductionDate.Date ?? DateTime.UtcNow.AddDays(1).Date;
 
         var deliveryAddress = package.Label?.DeliveryAddress;
-        var calendar = _sim.GetActiveCalendars(deliveryDate)
-            .FirstOrDefault(c => c.PatientId == package.PatientId && c.Address == deliveryAddress);
+        // A patient with several contracts has one calendar (and one MS4 delivery day) per plan, often at
+        // the same address: prefer the package's own plan, or the day id would point at another contract.
+        var calendars = _sim.GetActiveCalendars(deliveryDate)
+            .Where(c => c.PatientId == package.PatientId && c.Address == deliveryAddress)
+            .ToList();
+        var calendar = calendars.FirstOrDefault(c => c.PlanId == package.CatalogPlanId) ?? calendars.FirstOrDefault();
 
         var payload = JsonSerializer.Serialize(new
         {
