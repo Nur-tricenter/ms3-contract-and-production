@@ -53,6 +53,7 @@ public sealed class ConsolidateDailyOrderCommandHandlerTests
 public sealed class GetDailyOrderQueryHandlerTests
 {
     private readonly Mock<IDailyProductionOrderRepository> _repository = new();
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ISimulationService> _simulation = new();
     private readonly DateTime _productionDate = new(2026, 9, 5);
 
@@ -68,7 +69,7 @@ public sealed class GetDailyOrderQueryHandlerTests
         _repository
             .Setup(r => r.GetByProductionDateAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
-        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
 
         var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
 
@@ -78,6 +79,7 @@ public sealed class GetDailyOrderQueryHandlerTests
         result.Value.RecipesSummary.Should().HaveCount(2);
         _simulation.Verify(s => s.GetActiveCalendars(It.IsAny<DateTime>()), Times.Never);
         _repository.Verify(r => r.AddAsync(It.IsAny<DailyProductionOrder>()), Times.Never);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -100,7 +102,7 @@ public sealed class GetDailyOrderQueryHandlerTests
             {
                 new(planId, new List<SimMealBlock> { new("Lunch", recipeId) })
             });
-        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
 
         var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
 
@@ -110,6 +112,7 @@ public sealed class GetDailyOrderQueryHandlerTests
         result.Value.RecipesSummary[0].RecipeId.Should().Be(recipeId);
         result.Value.RecipesSummary[0].TotalPortionsRequired.Should().Be(2);
         _repository.Verify(r => r.AddAsync(It.IsAny<DailyProductionOrder>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -131,7 +134,7 @@ public sealed class GetDailyOrderQueryHandlerTests
                 new(planId, new List<SimMealBlock> { new("almuerzo", recetaConocida), new("cena", recetaDesconocida) })
             });
         _simulation.Setup(s => s.GetRecipeName(recetaConocida)).Returns("Sopa de quinua");
-        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
 
         var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
 
@@ -159,7 +162,7 @@ public sealed class GetDailyOrderQueryHandlerTests
                 new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Av. Banzer 123", -17.78, -63.18, "10:00", menu),
                 new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Calle 5", -17.79, -63.19, "", menu)
             });
-        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
 
         var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
 
@@ -189,7 +192,7 @@ public sealed class GetDailyOrderQueryHandlerTests
         _simulation
             .Setup(s => s.GetPlanStructures(It.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] == planSimulado)))
             .Returns(new List<SimPlanStructure> { new(planSimulado, new List<SimMealBlock> { new("cena", recetaSimulada) }) });
-        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
 
         var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
 
@@ -208,7 +211,7 @@ public sealed class GetDailyOrderQueryHandlerTests
         _simulation
             .Setup(s => s.GetPlanStructures(It.IsAny<List<Guid>>()))
             .Returns(new List<SimPlanStructure>());
-        var handler = new GetDailyOrderQueryHandler(_repository.Object, _simulation.Object);
+        var handler = new GetDailyOrderQueryHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
 
         var result = await handler.Handle(new GetDailyOrderQuery(_productionDate), CancellationToken.None);
 

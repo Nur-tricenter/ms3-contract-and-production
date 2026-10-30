@@ -1,3 +1,4 @@
+using Joseco.DDD.Core.Abstractions;
 using Joseco.DDD.Core.Results;
 using MediatR;
 using Nurtricenter.MS3.Application.Dtos.Production;
@@ -11,13 +12,16 @@ namespace Nurtricenter.MS3.Application.Handlers;
 public sealed class GetDailyOrderQueryHandler : IRequestHandler<GetDailyOrderQuery, Result<DailyOrderResponse>>
 {
     private readonly IDailyProductionOrderRepository _dailyProductionOrderRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ISimulationService _sim;
 
     public GetDailyOrderQueryHandler(
         IDailyProductionOrderRepository dailyProductionOrderRepository,
+        IUnitOfWork unitOfWork,
         ISimulationService sim)
     {
         _dailyProductionOrderRepository = dailyProductionOrderRepository;
+        _unitOfWork = unitOfWork;
         _sim = sim;
     }
 
@@ -69,6 +73,7 @@ public sealed class GetDailyOrderQueryHandler : IRequestHandler<GetDailyOrderQue
         // Consolidate and persist the order
         var order = Core.Aggregates.DailyProductionOrder.ConsolidateOrder(request.ProductionDate, items);
         await _dailyProductionOrderRepository.AddAsync(order);
+        await _unitOfWork.CommitAsync(cancellationToken);
 
         return MapToResponse(order);
     }
