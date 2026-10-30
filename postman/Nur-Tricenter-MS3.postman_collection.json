@@ -1,0 +1,1394 @@
+{
+  "info": {
+    "name": "Nur-Tricenter MS3 - demo de comunicacion entre microservicios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden (Runner o una por una) con la plataforma levantada con start-stack. La carpeta 5 necesita la variable deliveryId (ver su descripcion). Cada corrida usa un dia distinto del calendario."
+  },
+  "item": [
+    {
+      "name": "0. Seguridad (Identity + gateway)",
+      "item": [
+        {
+          "name": "0.1 Login admin (JWT de usuario)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 con token\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/identity-service/v1/auth/login",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "identity-service",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"admin\",\n  \"password\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Identity emite un JWT. El gateway NO lo valida: lo reenvia y cada servicio valida firma, issuer, audience y scope."
+          }
+        },
+        {
+          "name": "0.2 Login ms3-service (cuenta tecnica)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 con token\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"ms3Token\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/identity-service/v1/auth/login",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "identity-service",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"ms3-service\",\n  \"password\": \"dev-only-ms3-service-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Service account de MS3: solo tiene deliveryCalendar.calendar:create y deliveryCalendar.productionOrder:read."
+          }
+        },
+        {
+          "name": "0.3 MS4 SIN token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 sin token\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/active-tomorrow",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "active-tomorrow"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. MS2 -> MS3 (eventos del catalogo)",
+      "item": [
+        {
+          "name": "1.1 Planes en MS2 (catalogo real)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "const list = Array.isArray(b) ? b : (b.data && b.data.items) || b.data || b.items || [];",
+                  "pm.test(\"hay al menos un plan\", () => pm.expect(list.length).to.be.above(0));",
+                  "pm.collectionVariables.set(\"planId\", list[0].id || list[0].mealPlanId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/catalog/v1/meal-plans",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "v1",
+                "meal-plans"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "1.2 El mismo plan visto desde MS3 (copia local)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"MS3 ya tiene la copia del plan (llego por RabbitMQ)\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"con nombre\", () => pm.expect(pm.response.json().planName).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/sim/catalog/plans/{{planId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "sim",
+                "catalog",
+                "plans",
+                "{{planId}}"
+              ],
+              "query": []
+            },
+            "description": "MS3 nunca llamo a MS2: recibio meal-plan-published por RabbitMQ y guardo una copia (tabla CatalogPlans)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Contrato y pago (MS3 -> MS4 por REST)",
+      "item": [
+        {
+          "name": "2.1 Crear contrato",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"contractId\", pm.response.json().id);",
+                  "pm.test(\"PendingPayment\", () => pm.expect(pm.response.json().status).to.eql(\"PendingPayment\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/contracts",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "contracts"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"00000000-0000-0000-0000-000000000001\",\n  \"catalogPlanId\": \"{{planId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "2.2 Pagar el contrato",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 processed\", () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql(\"processed\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/billing/charge-plan",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "billing",
+                "charge-plan"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"{{contractId}}\",\n  \"amount\": 550,\n  \"invoiceNumber\": \"inv-{{$randomInt}}-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Responde al instante. La llamada a MS4 NO ocurre aqui: queda en una fila del outbox y la hace el worker."
+          }
+        },
+        {
+          "name": "2.3 Fila del outbox (espera hasta que MS4 acepte)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const contractId = pm.collectionVariables.get(\"contractId\");",
+                  "const url = pm.collectionVariables.get(\"gateway\") + \"/api/contracting/v1/sim/outgoing/CreateSchedule\";",
+                  "function poll(n) {",
+                  "  pm.sendRequest(url, (err, res) => {",
+                  "    const row = !err && res.json().find(e => e.payload.includes(contractId));",
+                  "    if ((row && row.status !== \"Simulated\") || n >= 40) return;",
+                  "    setTimeout(() => poll(n + 1), 1000);",
+                  "  });",
+                  "}",
+                  "poll(0);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const row = pm.response.json().find(e => e.payload.includes(pm.collectionVariables.get(\"contractId\")));",
+                  "pm.test(\"existe la fila del contrato\", () => pm.expect(row).to.exist);",
+                  "console.log(\"Estado de la fila:\", row && row.status);",
+                  "pm.test(\"Published = MS4 creo el calendario (si dice Simulated, repite en unos segundos)\", () => pm.expect(row.status).to.eql(\"Published\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/sim/outgoing/CreateSchedule",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "sim",
+                "outgoing",
+                "CreateSchedule"
+              ],
+              "query": []
+            },
+            "description": "Simulated = pendiente. Published = MS4 acepto el calendario."
+          }
+        },
+        {
+          "name": "2.4 Calendario creado en MS4",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const contractId = pm.collectionVariables.get(\"contractId\");",
+                  "const token = pm.collectionVariables.get(\"adminToken\");",
+                  "const base = pm.collectionVariables.get(\"gateway\");",
+                  "function probe(i) {",
+                  "  if (i > 300) return;",
+                  "  pm.sendRequest({ url: `${base}/api/delivery-calendar/v1/calendars/${i}`, method: \"GET\", header: { Authorization: `Bearer ${token}` } }, (err, res) => {",
+                  "    if (!err && res.code === 200 && res.json().contractId === contractId) { pm.collectionVariables.set(\"calendarId\", i); } else { probe(i + 1); }",
+                  "  });",
+                  "}",
+                  "probe(1);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"calendario de MI contrato\", () => pm.expect(pm.response.json().contractId).to.eql(pm.collectionVariables.get(\"contractId\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/{{calendarId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "{{calendarId}}"
+              ],
+              "query": []
+            },
+            "description": "Antes de pedirlo busca el calendario por contractId. Alternativa: psql contra ms4_delivery_calendar (ver guion)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Produccion (MS3 lee el menu de MS4)",
+      "item": [
+        {
+          "name": "3.1 Ver el calendario y elegir un dia distinto en cada corrida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const c = pm.response.json();",
+                  "pm.test(\"30 dias\", () => pm.expect(c.days.length).to.eql(30));",
+                  "// Un dia distinto por calendario: dos contratos del mismo paciente y plan en la misma fecha confunden el dia (ms3-gap-15).",
+                  "const n = ((parseInt(pm.collectionVariables.get(\"calendarId\"), 10) - 1) % 29) + 1;",
+                  "console.log(\"Dia elegido:\", c.days[n].date, \"(dayId\", c.days[n].id + \")\");",
+                  "pm.collectionVariables.set(\"dayId\", c.days[n].id);",
+                  "pm.collectionVariables.set(\"productionDate\", c.days[n].date);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/{{calendarId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "{{calendarId}}"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "3.2 Paciente pone la direccion de ese dia (MS4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/{{calendarId}}/addresses",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "{{calendarId}}",
+                "addresses"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\": \"{{dayId}}\",\n  \"street\": \"Av. Banzer 123\",\n  \"city\": \"Santa Cruz\",\n  \"latitude\": -17.78,\n  \"longitude\": -63.18,\n  \"references\": \"porton verde\",\n  \"notes\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3.3 Job nocturno de MS4: resolve-daily-catalog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/resolve-daily-catalog?date={{productionDate}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "resolve-daily-catalog"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{productionDate}}"
+                }
+              ]
+            },
+            "description": "MS4 pide el menu del dia a MS2 (service account ms4-service) y consolida la orden."
+          }
+        },
+        {
+          "name": "3.4 MS3 pide la orden a MS4 (como ms3-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const l = pm.response.json();",
+                  "pm.test(\"hay entregas\", () => pm.expect(l.length).to.be.above(0));",
+                  "pm.test(\"con menu del dia\", () => pm.expect(l[0].menu.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ms3Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/active-tomorrow?date={{productionDate}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "active-tomorrow"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{productionDate}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.5 ms3-service NO puede editar calendarios -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403: minimo privilegio\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ms3Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/{{calendarId}}/cancel-day",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "{{calendarId}}",
+                "cancel-day"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\": \"{{dayId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3.6 Orden de produccion diaria en MS3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.collectionVariables.set(\"orderId\", o.productionOrderId);",
+                  "pm.test(\"recetas reales de MS2\", () => pm.expect(o.recipesSummary.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/production/daily-order?productionDate={{productionDate}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "production",
+                "daily-order"
+              ],
+              "query": [
+                {
+                  "key": "productionDate",
+                  "value": "{{productionDate}}"
+                }
+              ]
+            },
+            "description": "Recetas y raciones del menu que MS4 consolido para ese dia."
+          }
+        },
+        {
+          "name": "3.7 Crear paquete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"packageId\", pm.response.json().packageId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/production/packages",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "production",
+                "packages"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productionOrderId\": \"{{orderId}}\",\n  \"patientId\": \"00000000-0000-0000-0000-000000000001\",\n  \"catalogPlanId\": \"{{planId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3.8 Armar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/production/packages/assemble",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "production",
+                "packages",
+                "assemble"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageId\": \"{{packageId}}\",\n  \"staffId\": \"cocina-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3.9 Etiquetar (toma la direccion del dia en MS4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/production/packages/label",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "production",
+                "packages",
+                "label"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageId\": \"{{packageId}}\",\n  \"patientId\": \"00000000-0000-0000-0000-000000000001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. MS3 -> MS5 (evento package-validated)",
+      "item": [
+        {
+          "name": "4.1 MS5: crear repartidor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201/200\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.collectionVariables.set(\"courierId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/nurtricenter/v1/couriers",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "nurtricenter",
+                "v1",
+                "couriers"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Repartidor demo {{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4.2 MS5: crear la ruta del dia de entrega",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201/200\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.collectionVariables.set(\"routeId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/nurtricenter/v1/routes",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "nurtricenter",
+                "v1",
+                "routes"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courierId\": \"{{courierId}}\",\n  \"scheduledDate\": \"{{productionDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "MS5 asigna cada paquete a la ruta de su fecha de entrega. Si la ruta no existe cuando llega el evento, MS5 lo manda a ms5.package-validated.error."
+          }
+        },
+        {
+          "name": "4.3 MS3: validar calidad (publica PackageValidated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 y 1 validado\", () => { pm.response.to.have.status(200); pm.expect(pm.response.json().validatedCount).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/production/packages/validate",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "production",
+                "packages",
+                "validate"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productionOrderId\": \"{{orderId}}\",\n  \"supervisorId\": \"sup-01\",\n  \"batchValidated\": true,\n  \"totalValidatedCount\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4.4 MS3: evento publicado desde el outbox",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const pkg = pm.collectionVariables.get(\"packageId\");",
+                  "const url = pm.collectionVariables.get(\"gateway\") + \"/api/contracting/v1/sim/outgoing/TransferToLogistics\";",
+                  "function poll(n) {",
+                  "  pm.sendRequest(url, (err, res) => {",
+                  "    const row = !err && res.json().find(e => e.payload.includes(pkg));",
+                  "    if ((row && row.status !== \"Simulated\") || n >= 30) return;",
+                  "    setTimeout(() => poll(n + 1), 1000);",
+                  "  });",
+                  "}",
+                  "poll(0);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const row = pm.response.json().find(e => e.payload.includes(pm.collectionVariables.get(\"packageId\")));",
+                  "pm.test(\"Published\", () => pm.expect(row && row.status).to.eql(\"Published\"));",
+                  "const p = JSON.parse(row.payload);",
+                  "pm.test(\"direccion, coordenadas y fecha del dia de MS4\", () => {",
+                  "  pm.expect(p.deliveryAddress).to.eql(\"Av. Banzer 123, Santa Cruz\");",
+                  "  pm.expect(p.latitude).to.eql(-17.78);",
+                  "  pm.expect(p.deliveryDate).to.eql(pm.collectionVariables.get(\"productionDate\"));",
+                  "});",
+                  "pm.test(\"deliveryDayId = el dia de MS4\", () => pm.expect(String(p.deliveryDayId)).to.eql(String(pm.collectionVariables.get(\"dayId\"))));",
+                  "console.log(\"Para el paso 5, en la terminal:\");",
+                  "console.log(`'select \"DeliveryId\" from \"DeliveryRouteLinks\" where \"DayId\"=${p.deliveryDayId};' | docker exec -i nur-tricenter-postgres psql -U dev-only -d ms4_delivery_calendar -t`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/contracting/v1/sim/outgoing/TransferToLogistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "contracting",
+                "v1",
+                "sim",
+                "outgoing",
+                "TransferToLogistics"
+              ],
+              "query": []
+            },
+            "description": "Payload que el worker publico en el exchange package-validated."
+          }
+        },
+        {
+          "name": "4.5 RabbitMQ: MS5 consumio el mensaje (no esta en la cola de error)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.collectionVariables.get(\"rabbit\");",
+                  "function poll(n) {",
+                  "  pm.sendRequest({ url: base + \"/api/queues/%2F/ms5.package-validated\", header: { Authorization: \"Basic Z3Vlc3Q6Z3Vlc3Q=\" } }, (err, res) => {",
+                  "    if ((!err && res.json().messages === 0) || n >= 20) return setTimeout(() => {}, 3000);",
+                  "    setTimeout(() => poll(n + 1), 1000);",
+                  "  });",
+                  "}",
+                  "poll(0);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const pkg = pm.collectionVariables.get(\"packageId\");",
+                  "const msgs = pm.response.code === 200 ? pm.response.json().map(m => JSON.parse(m.payload)) : [];",
+                  "pm.test(\"MI paquete NO esta en ms5.package-validated.error\", () => pm.expect(msgs.some(m => m.PackageId === pkg)).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "guest",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "guest",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{rabbit}}/api/queues/%2F/ms5.package-validated.error/get",
+              "host": [
+                "{{rabbit}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "ms5.package-validated.error",
+                "get"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 50,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ms5.package-validated se vacia porque MS5 lo consume. Si MS5 rechaza el paquete (por ejemplo, sin ruta para la fecha), el mensaje termina en ms5.package-validated.error."
+          }
+        },
+        {
+          "name": "4.6 MS5: iniciar la ruta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/nurtricenter/v1/routes/{{routeId}}/start",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "nurtricenter",
+                "v1",
+                "routes",
+                "{{routeId}}",
+                "start"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. MS5 -> MS4 (entrega y cierre del dia)",
+      "description": "Antes de correr esta carpeta: copia el id de la entrega con el comando psql que imprime 4.4 en la consola de Postman y pegalo en la variable deliveryId de la coleccion.",
+      "item": [
+        {
+          "name": "5.1 MS5: marcar la entrega como entregada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 Delivered\", () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql(\"Delivered\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gateway}}/api/nurtricenter/v1/routes/{{routeId}}/deliveries/{{deliveryId}}/deliver",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "nurtricenter",
+                "v1",
+                "routes",
+                "{{routeId}}",
+                "deliveries",
+                "{{deliveryId}}",
+                "deliver"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deliveredAt\": \"{{$isoTimestamp}}\",\n  \"evidencePhotoUrl\": \"https://example.org/foto.jpg\",\n  \"digitalSignature\": \"firma-paciente\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "MS5 publica delivery-completed; MS4 lo consume y cierra el dia."
+          }
+        },
+        {
+          "name": "5.2 MS4: el dia queda Delivered",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.get(\"gateway\");",
+                  "const cal = pm.variables.get(\"calendarId\");",
+                  "const dayId = String(pm.variables.get(\"dayId\"));",
+                  "const token = pm.variables.get(\"adminToken\");",
+                  "function poll(n) {",
+                  "  pm.sendRequest({ url: `${base}/api/delivery-calendar/v1/calendars/${cal}`, header: { Authorization: `Bearer ${token}` } }, (err, res) => {",
+                  "    const d = !err && res.json().days.find(x => String(x.id) === dayId);",
+                  "    if ((d && d.status === \"Delivered\") || n >= 20) return;",
+                  "    setTimeout(() => poll(n + 1), 1000);",
+                  "  });",
+                  "}",
+                  "poll(0);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().days.find(x => String(x.id) === String(pm.variables.get(\"dayId\")));",
+                  "pm.test(\"dia Delivered en MS4\", () => pm.expect(d.status).to.eql(\"Delivered\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gateway}}/api/delivery-calendar/v1/calendars/{{calendarId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "delivery-calendar",
+                "v1",
+                "calendars",
+                "{{calendarId}}"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "gateway",
+      "value": "http://localhost:15005"
+    },
+    {
+      "key": "rabbit",
+      "value": "http://localhost:15672"
+    },
+    {
+      "key": "deliveryId",
+      "value": ""
+    }
+  ]
+}
