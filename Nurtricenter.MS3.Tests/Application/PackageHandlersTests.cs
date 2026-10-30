@@ -79,6 +79,7 @@ public sealed class GenerateLabelCommandHandlerTests
 {
     private readonly Mock<IPackageRepository> _repository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IDailyProductionOrderRepository> _productionOrders = new();
     private readonly Mock<ISimulationService> _simulation = new();
     private readonly Guid _patientId = Guid.NewGuid();
 
@@ -94,7 +95,7 @@ public sealed class GenerateLabelCommandHandlerTests
             {
                 new(Guid.NewGuid(), _patientId, package.CatalogPlanId, "Av. Principal 123", -16.5, -68.1, "10:00")
             });
-        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
+        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _productionOrders.Object, _simulation.Object);
 
         var result = await handler.Handle(new GenerateLabelCommand(package.Id, _patientId), CancellationToken.None);
 
@@ -107,6 +108,48 @@ public sealed class GenerateLabelCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_busca_la_direccion_en_la_fecha_de_la_orden_de_produccion()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Assembled);
+        var productionDate = new DateTime(2026, 11, 5);
+        var order = DailyProductionOrder.ConsolidateOrder(productionDate, [new ProductionItem(Guid.NewGuid(), "Receta", 1)]);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _productionOrders.Setup(r => r.GetByIdAsync(package.ProductionOrderId, It.IsAny<bool>())).ReturnsAsync(order);
+        _simulation.Setup(s => s.GetPatient(It.IsAny<Guid>()))
+            .Returns(new SimPatient(_patientId, "María López", "Stable"));
+        _simulation.Setup(s => s.GetActiveCalendars(productionDate))
+            .Returns([new SimActiveCalendar(Guid.NewGuid(), _patientId, package.CatalogPlanId, "Calle del día 5", -16.5, -68.1, "10:00")]);
+        _simulation.Setup(s => s.GetActiveCalendars(It.Is<DateTime>(d => d != productionDate))).Returns([]);
+        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _productionOrders.Object, _simulation.Object);
+
+        var result = await handler.Handle(new GenerateLabelCommand(package.Id, _patientId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        package.Label!.DeliveryAddress.Should().Be("Calle del día 5");
+        _simulation.Verify(s => s.GetActiveCalendars(productionDate), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_prefiere_el_calendario_del_plan_del_paquete_cuando_el_paciente_tiene_varios()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Assembled);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetPatient(It.IsAny<Guid>()))
+            .Returns(new SimPatient(_patientId, "María López", "Stable"));
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns(
+        [
+            new SimActiveCalendar(Guid.NewGuid(), _patientId, Guid.NewGuid(), "Dirección de otro plan", -1.0, -2.0, "08:00"),
+            new SimActiveCalendar(Guid.NewGuid(), _patientId, package.CatalogPlanId, "Dirección de su plan", -16.5, -68.1, "10:00")
+        ]);
+        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _productionOrders.Object, _simulation.Object);
+
+        var result = await handler.Handle(new GenerateLabelCommand(package.Id, _patientId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        package.Label!.DeliveryAddress.Should().Be("Dirección de su plan");
+    }
+
+    [Fact]
     public async Task Handle_uses_placeholder_address_when_no_calendar_matches()
     {
         var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Assembled);
@@ -115,7 +158,7 @@ public sealed class GenerateLabelCommandHandlerTests
             .Returns(new SimPatient(_patientId, "María López", "Stable"));
         _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>()))
             .Returns(new List<SimActiveCalendar>());
-        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
+        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _productionOrders.Object, _simulation.Object);
 
         var result = await handler.Handle(new GenerateLabelCommand(package.Id, _patientId), CancellationToken.None);
 
@@ -129,7 +172,7 @@ public sealed class GenerateLabelCommandHandlerTests
         var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Assembled);
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
         _simulation.Setup(s => s.GetPatient(It.IsAny<Guid>())).Returns((SimPatient?)null);
-        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
+        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _productionOrders.Object, _simulation.Object);
 
         var result = await handler.Handle(new GenerateLabelCommand(package.Id, _patientId), CancellationToken.None);
 
@@ -143,7 +186,7 @@ public sealed class GenerateLabelCommandHandlerTests
     public async Task Handle_returns_not_found_when_package_missing()
     {
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync((Package?)null);
-        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _simulation.Object);
+        var handler = new GenerateLabelCommandHandler(_repository.Object, _unitOfWork.Object, _productionOrders.Object, _simulation.Object);
 
         var result = await handler.Handle(new GenerateLabelCommand(Guid.NewGuid(), _patientId), CancellationToken.None);
 

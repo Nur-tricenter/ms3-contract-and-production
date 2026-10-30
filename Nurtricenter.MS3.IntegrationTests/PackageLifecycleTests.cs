@@ -139,7 +139,7 @@ public sealed class PackageLifecycleTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task POST_packages_label_usa_la_direccion_del_primer_plan_del_paciente_ignorando_el_plan_del_paquete()
+    public async Task POST_packages_label_usa_la_direccion_del_calendario_del_plan_del_paquete()
     {
         var client = _factory.CreateApiClient();
         var ordenDeProduccion = Guid.NewGuid();
@@ -172,8 +172,8 @@ public sealed class PackageLifecycleTests : IClassFixture<ApiFactory>
         paqueteEtiquetado!.Status.Should().Be(PackageStatus.Labeled);
         paqueteEtiquetado.CatalogPlanId.Should().Be(PlanBasicMensual);
         paqueteEtiquetado.Label.Should().NotBeNull();
-        paqueteEtiquetado.Label!.DeliveryAddress.Should().Be(DireccionPrimerCalendarioDeJuanPerez);
-        paqueteEtiquetado.Label.DeliveryAddress.Should().NotBe(DireccionCalendarioDeJuanPerezParaPlanBasico);
+        paqueteEtiquetado.Label!.DeliveryAddress.Should().Be(DireccionCalendarioDeJuanPerezParaPlanBasico);
+        paqueteEtiquetado.Label.DeliveryAddress.Should().NotBe(DireccionPrimerCalendarioDeJuanPerez);
     }
 
     [Fact]

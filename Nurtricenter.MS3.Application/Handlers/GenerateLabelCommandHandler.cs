@@ -11,15 +11,18 @@ public sealed class GenerateLabelCommandHandler : IRequestHandler<GenerateLabelC
 {
     private readonly IPackageRepository _packageRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDailyProductionOrderRepository _productionOrders;
     private readonly ISimulationService _sim;
 
     public GenerateLabelCommandHandler(
         IPackageRepository packageRepository,
         IUnitOfWork unitOfWork,
+        IDailyProductionOrderRepository productionOrders,
         ISimulationService sim)
     {
         _packageRepository = packageRepository;
         _unitOfWork = unitOfWork;
+        _productionOrders = productionOrders;
         _sim = sim;
     }
 
@@ -36,9 +39,14 @@ public sealed class GenerateLabelCommandHandler : IRequestHandler<GenerateLabelC
             return Result.Failure(
                 new Error("PATIENT_NOT_FOUND", $"Patient {request.PatientId} not found in MS1.", ErrorType.NotFound));
 
-        // Simulate MS4: get delivery address from active calendars
-        var calendars = _sim.GetActiveCalendars(DateTime.UtcNow.AddDays(1).Date);
-        var calendar = calendars.FirstOrDefault(c => c.PatientId == request.PatientId);
+        // The address comes from MS4's delivery day on the order's production date, not always tomorrow,
+        // and from the package's own plan when the patient has several calendars.
+        var productionOrder = await _productionOrders.GetByIdAsync(package.ProductionOrderId, true);
+        var deliveryDate = productionOrder?.ProductionDate.Date ?? DateTime.UtcNow.AddDays(1).Date;
+        var calendars = _sim.GetActiveCalendars(deliveryDate)
+            .Where(c => c.PatientId == request.PatientId)
+            .ToList();
+        var calendar = calendars.FirstOrDefault(c => c.PlanId == package.CatalogPlanId) ?? calendars.FirstOrDefault();
         var address = calendar?.Address ?? "Address not found";
 
         package.GenerateLabel(patient.FullName, address);
