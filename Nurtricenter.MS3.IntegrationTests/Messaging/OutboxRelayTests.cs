@@ -138,6 +138,7 @@ public sealed class OutboxRelayTests : IDisposable
             packageId = paqueteId,
             PatientId = Guid.NewGuid(),
             patientName = "Juan Perez",
+            patientPhone = "+591 700 22222",
             ProductionOrderId = ordenId,
             CatalogPlanId = Guid.NewGuid(),
             status = "validatedAndReleased",
@@ -168,6 +169,7 @@ public sealed class OutboxRelayTests : IDisposable
         paquete.Latitude.Should().Be(-12.0464);
         paquete.Longitude.Should().Be(-77.0428);
         paquete.DeliveryDayId.Should().Be(42);
+        paquete.PatientPhone.Should().Be("+591 700 22222");
         (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
     }
 

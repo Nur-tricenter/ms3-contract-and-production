@@ -23,7 +23,7 @@ public sealed class ClinicSimulationService : ISimulationService
 
         return patient is null
             ? null
-            : new SimPatient(patient.Id, $"{patient.Nombre} {patient.Apellido}".Trim(), ActiveStatus);
+            : new SimPatient(patient.Id, $"{patient.Nombre} {patient.Apellido}".Trim(), ActiveStatus, patient.Telefono);
     }
 
     public SimPlan? GetPlan(Guid planId)

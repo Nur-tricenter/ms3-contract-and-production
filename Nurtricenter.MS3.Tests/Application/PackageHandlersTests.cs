@@ -172,6 +172,7 @@ public sealed class ApproveQualityCommandHandlerTests
         _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
         _productionOrders.Setup(r => r.GetByIdAsync(package.ProductionOrderId, It.IsAny<bool>())).ReturnsAsync(order);
         _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns([]);
+        _simulation.Setup(s => s.GetPatient(package.PatientId)).Returns(new SimPatient(package.PatientId, "María López", "Stable", "+591 700 11111"));
         OutgoingIntegrationEvent? emitted = null;
         _outgoingEvents
             .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
@@ -182,8 +183,30 @@ public sealed class ApproveQualityCommandHandlerTests
 
         using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
         payload.RootElement.GetProperty("patientName").GetString().Should().Be("María López");
+        payload.RootElement.GetProperty("patientPhone").GetString().Should().Be("+591 700 11111");
         payload.RootElement.GetProperty("deliveryDate").GetString().Should().Be("2026-11-05");
         _simulation.Verify(s => s.GetActiveCalendars(productionDate), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_emite_el_evento_sin_telefono_si_el_servicio_clinico_falla()
+    {
+        var package = RegisterAssemblyCommandHandlerTests.CreatePackageAt(PackageStatus.Labeled);
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<bool>())).ReturnsAsync(package);
+        _simulation.Setup(s => s.GetActiveCalendars(It.IsAny<DateTime>())).Returns([]);
+        _simulation.Setup(s => s.GetPatient(It.IsAny<Guid>())).Throws(new HttpRequestException("MS1 down"));
+        OutgoingIntegrationEvent? emitted = null;
+        _outgoingEvents
+            .Setup(o => o.AddAsync(It.IsAny<OutgoingIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingIntegrationEvent, CancellationToken>((evt, _) => emitted = evt)
+            .Returns(Task.CompletedTask);
+
+        var result = await CreateHandler().Handle(new ApproveQualityCommand(package.Id, "SUP-99"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        using var payload = System.Text.Json.JsonDocument.Parse(emitted!.Payload);
+        payload.RootElement.GetProperty("patientName").GetString().Should().Be("María López");
+        payload.RootElement.GetProperty("patientPhone").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
     }
 
     [Fact]

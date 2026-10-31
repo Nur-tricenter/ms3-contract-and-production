@@ -8,7 +8,7 @@ public interface IClinicClient
     Task<ClinicPatient?> GetPatientAsync(Guid patientId, CancellationToken cancellationToken = default);
 }
 
-public sealed record ClinicPatient(Guid Id, string Nombre, string Apellido);
+public sealed record ClinicPatient(Guid Id, string Nombre, string Apellido, string? Telefono = null);
 
 public sealed class DisabledClinicClient : IClinicClient
 {

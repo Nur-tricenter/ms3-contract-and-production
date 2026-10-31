@@ -132,7 +132,8 @@ public sealed class OutboxRelay
             TrackingNumber = payload.TrackingNumber ?? string.Empty,
             Latitude = payload.Latitude,
             Longitude = payload.Longitude,
-            DeliveryDayId = payload.DeliveryDayId
+            DeliveryDayId = payload.DeliveryDayId,
+            PatientPhone = payload.PatientPhone
         };
     }
 
@@ -157,5 +158,6 @@ public sealed class OutboxRelay
         string? TrackingNumber,
         double? Latitude,
         double? Longitude,
-        int? DeliveryDayId);
+        int? DeliveryDayId,
+        string? PatientPhone = null);
 }

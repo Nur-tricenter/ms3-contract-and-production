@@ -26,7 +26,7 @@ public sealed class ClinicClientTests
             {
                 "/api/identity-service/v1/auth/login" => Json(HttpStatusCode.OK, "{\"accessToken\":\"token-ms3-1\",\"expiresIn\":3600}"),
                 var ruta when ruta == $"/api/clinica-nutricional/v1/Patient/{PacienteExistente}" =>
-                    Json(HttpStatusCode.OK, $"{{\"id\":\"{PacienteExistente}\",\"ci\":\"1234567\",\"nombre\":\"Ana\",\"apellido\":\"Perez\",\"consultaIniciales\":[]}}"),
+                    Json(HttpStatusCode.OK, $"{{\"id\":\"{PacienteExistente}\",\"ci\":\"1234567\",\"nombre\":\"Ana\",\"apellido\":\"Perez\",\"telefono\":\"+591 700 33333\",\"consultaIniciales\":[]}}"),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound)
             };
 
@@ -77,7 +77,7 @@ public sealed class ClinicClientTests
 
         var paciente = await cliente.GetPatientAsync(PacienteExistente);
 
-        paciente.Should().Be(new ClinicPatient(PacienteExistente, "Ana", "Perez"));
+        paciente.Should().Be(new ClinicPatient(PacienteExistente, "Ana", "Perez", "+591 700 33333"));
         plataforma.Solicitudes[1].Ruta.Should().Be($"/api/clinica-nutricional/v1/Patient/{PacienteExistente}");
         plataforma.Solicitudes[1].Autorizacion.Should().Be("Bearer token-ms3-1");
     }
@@ -105,6 +105,7 @@ public sealed class ClinicClientTests
 
         paciente!.FullName.Should().Be("Ana Perez");
         paciente.PatientId.Should().Be(PacienteExistente);
+        paciente.Phone.Should().Be("+591 700 33333");
         desconocido.Should().BeNull();
     }
 }
