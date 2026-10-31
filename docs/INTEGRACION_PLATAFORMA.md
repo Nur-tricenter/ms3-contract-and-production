@@ -62,6 +62,15 @@ decora `ISimulationService`:
 - **`GetRecipeName`:** nombre real de la receta en la orden de producción diaria;
   si no se conoce, se mantiene `Recipe-xxxxxxxx`.
 
+## MS3 → MS1: pacientes reales
+
+Con `Clinic__BaseUrl` configurado (en la plataforma `http://gateway:8080`), `ClinicSimulationService`
+reemplaza a los 3 pacientes simulados: `GetPatient` llama a
+`GET /api/clinica-nutricional/v1/Patient/{id}` con el JWT de `ms3-service` (MS1 solo exige un token
+válido, sin scopes) y arma el nombre con `nombre` + `apellido`. Un `404` de MS1 se traduce en
+`PATIENT_NOT_FOUND`; cualquier otro error propaga como 500. Sin `Clinic__BaseUrl` (standalone) siguen
+los pacientes simulados.
+
 ## MS3 → MS4: REST con la service account `ms3-service`
 
 MS3 llama a MS4 a través del gateway (`DeliveryCalendar__BaseUrl`, en la plataforma
