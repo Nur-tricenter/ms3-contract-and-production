@@ -31,11 +31,9 @@ services:
       ServiceRegistration__ServiceName: "contracting"
       ServiceRegistration__Host: "contracting-api"
       ServiceRegistration__Port: "8080"
-      DeliveryCalendar__BaseUrl: "http://gateway:8080"
-      Clinic__BaseUrl: "http://gateway:8080"
-      Identity__BaseUrl: "http://gateway:8080"
-      Identity__ServiceUserName: "ms3-service"
-      Identity__ServicePassword: "dev-only-ms3-service-password"
+      # Patients and next-day deliveries come from projections of MS1's and MS4's events (filled by
+      # the worker). No HTTP call to any service.
+      Projections__Enabled: "true"
     networks: [nur-tricenter-net]
     depends_on:
       db:
@@ -69,11 +67,6 @@ services:
       RabbitMqSettings__RetryBaseDelayMilliseconds: "500"
       Outbox__PollingIntervalSeconds: "5"
       Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: "Warning"
-      DeliveryCalendar__BaseUrl: "http://gateway:8080"
-      Clinic__BaseUrl: "http://gateway:8080"
-      Identity__BaseUrl: "http://gateway:8080"
-      Identity__ServiceUserName: "ms3-service"
-      Identity__ServicePassword: "dev-only-ms3-service-password"
     networks: [nur-tricenter-net]
     depends_on:
       db:

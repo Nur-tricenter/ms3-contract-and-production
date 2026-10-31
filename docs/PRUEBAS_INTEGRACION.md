@@ -1,5 +1,12 @@
 # Cómo probar la comunicación de MS3 y qué esperar de cada evento
 
+> **Update (async messaging change):** MS3 no longer calls MS1 or MS4 over REST. MS3 publishes `contract-activated`
+> and projects MS1's `paciente-published` and MS4's `production-order-ready`; see
+> [INTEGRACION_PLATAFORMA.md](INTEGRACION_PLATAFORMA.md). The REST sections, the `ms3-service` token and the
+> `DeliveryCalendarClientTests` / `ClinicClientTests` rows below describe the previous design and the 2026-10-23
+> run; they are kept as history. The tests that replaced them are `OutboxRelayTests` (publishes
+> `ContractActivated`) and `ProjectionConsumersTests` (patients and next-day deliveries).
+
 Guía práctica para verificar que MS3 (Contratación y Producción) habla con el resto
 de la plataforma: eventos por RabbitMQ con MS2 y MS5, y REST con MS4. Complementa a
 [INTEGRACION_PLATAFORMA.md](INTEGRACION_PLATAFORMA.md), que explica el diseño.
@@ -30,10 +37,10 @@ sin broker ni MS4: el relay publica en un `BrokerEnMemoria`, MS4 es un
 
 | Clase | Qué demuestra |
 |---|---|
-| `OutboxRelayTests` | `CreateSchedule` → `POST /schedule` a MS4 con duración e inicio; MS4 rechaza o falta duración → `Rejected`; MS4 caído → pendiente; MS4 sin configurar → `Unroutable`; `TransferToLogistics` → `PackageValidated` en `package-validated`; no republica; tipo desconocido o payload inválido → `Unroutable`; broker caído → la fila queda pendiente |
+| `OutboxRelayTests` | `CreateSchedule` → `ContractActivated` en `contract-activated` (el `Id` del mensaje es el de la fila del outbox); falta duración → `Rejected`; broker caído → pendiente; `TransferToLogistics` → `PackageValidated` en `package-validated`; no republica; tipo desconocido o payload inválido → `Unroutable`; broker caído → la fila queda pendiente |
 | `CatalogConsumersTests` | Proyección de planes y recetas; redelivery con el mismo `Id` se descarta (inbox); deserializa el JSON exacto que publica el catálogo |
-| `DeliveryCalendarClientTests` | Cliente HTTP real contra un MS4 e identity falsos: login de `ms3-service`, `Bearer`, JSON exacto de `POST /schedule`, 400/422 → rechazo, 5xx → reintento, mapeo de `active-tomorrow` con y sin `menu` |
-| `CatalogProjectionFlowTests` | Por HTTP: contrato con un plan que solo existe en la proyección → 201; pago → el relay crea el calendario en MS4 con la duración del plan proyectado y el día siguiente como inicio |
+| `ProjectionConsumersTests` | `ProductionOrderReady` → `ScheduledDeliveries` (reemplaza las filas de la fecha, ignora un snapshot viejo, un día reprogramado cambia de fecha sin chocar), servido como calendarios activos con el menú ordenado; `PatientPublished` → `ClinicPatients` (upsert, ignora el viejo); paciente desconocido → no encontrado; inbox idempotente |
+| `CatalogProjectionFlowTests` | Por HTTP: contrato con un plan que solo existe en la proyección → 201; pago → el relay publica `ContractActivated` con la duración del plan proyectado y el día siguiente como inicio |
 | `DailyOrderSinRecetasTests` | Por HTTP: calendario sin menú de un plan desconocido → `GET /v1/production/daily-order` responde 422 con mensaje y no crea la orden |
 
 ## Nivel 2 — MS3 solo, con su propio RabbitMQ

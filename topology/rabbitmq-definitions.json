@@ -13,18 +13,25 @@
     { "name": "meal-plan-published", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
     { "name": "recipe-published", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
     { "name": "recipe-updated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
-    { "name": "package-validated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} }
+    { "name": "package-validated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "contract-activated", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "production-order-ready", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "paciente-published", "vhost": "/", "type": "fanout", "durable": false, "auto_delete": false, "internal": false, "arguments": {} }
   ],
   "queues": [
     { "name": "ms3.meal-plan-published", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
     { "name": "ms3.recipe-published", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
     { "name": "ms3.recipe-updated", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "ms5.package-validated", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
+    { "name": "ms5.package-validated", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "ms3.production-order-ready", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "ms3.paciente-published", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
   ],
   "bindings": [
     { "source": "meal-plan-published", "vhost": "/", "destination": "ms3.meal-plan-published", "destination_type": "queue", "routing_key": "", "arguments": {} },
     { "source": "recipe-published", "vhost": "/", "destination": "ms3.recipe-published", "destination_type": "queue", "routing_key": "", "arguments": {} },
     { "source": "recipe-updated", "vhost": "/", "destination": "ms3.recipe-updated", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "package-validated", "vhost": "/", "destination": "ms5.package-validated", "destination_type": "queue", "routing_key": "", "arguments": {} }
+    { "source": "package-validated", "vhost": "/", "destination": "ms5.package-validated", "destination_type": "queue", "routing_key": "", "arguments": {} },
+    { "source": "production-order-ready", "vhost": "/", "destination": "ms3.production-order-ready", "destination_type": "queue", "routing_key": "", "arguments": {} },
+    { "source": "paciente-published", "vhost": "/", "destination": "ms3.paciente-published", "destination_type": "queue", "routing_key": "", "arguments": {} }
   ]
 }

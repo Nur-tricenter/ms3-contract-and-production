@@ -218,6 +218,28 @@ namespace Nurtricenter.MS3.Infrastructure.Data.Migrations
                     b.ToTable("CatalogRecipes", (string)null);
                 });
 
+            modelBuilder.Entity("Nurtricenter.MS3.Infrastructure.Data.ReadModels.ClinicPatient", b =>
+                {
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("SnapshotAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PatientId");
+
+                    b.ToTable("ClinicPatients", (string)null);
+                });
+
             modelBuilder.Entity("Nurtricenter.MS3.Infrastructure.Data.ReadModels.InboxMessage", b =>
                 {
                     b.Property<Guid>("MessageId")
@@ -243,6 +265,49 @@ namespace Nurtricenter.MS3.Infrastructure.Data.Migrations
                     b.HasIndex("ProcessedOn");
 
                     b.ToTable("InboxMessages", (string)null);
+                });
+
+            modelBuilder.Entity("Nurtricenter.MS3.Infrastructure.Data.ReadModels.ScheduledDelivery", b =>
+                {
+                    b.Property<int>("DeliveryDayId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("DeliveryDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Hour")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("MenuJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SnapshotAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DeliveryDayId");
+
+                    b.HasIndex("DeliveryDate");
+
+                    b.ToTable("ScheduledDeliveries", (string)null);
                 });
 
             modelBuilder.Entity("Nurtricenter.MS3.Core.Aggregates.Contract", b =>
