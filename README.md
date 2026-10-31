@@ -23,6 +23,7 @@ Gestionar el ciclo completo desde que un paciente selecciona un plan hasta que s
 | | Registrar armado de paquete | `POST /api/v1/production/packages/assemble` |
 | | Generar etiqueta de envío | `POST /api/v1/production/packages/label` |
 | | Validar paquete (control de calidad) | `POST /api/v1/production/packages/validate` |
+| | List the packages of a production order (gap X-17) | `GET /api/v1/production/orders/{id}/packages` |
 | **Simulación** | Endpoints auxiliares para MS1/MS2/MS4/MS5 | `/api/v1/sim/*` |
 | **Salud** | Health check | `GET /health` |
 

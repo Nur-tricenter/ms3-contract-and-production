@@ -68,3 +68,25 @@ public sealed record RecipeSummary(
     string RecipeName,
     int TotalPortionsRequired
 );
+
+/// <summary>
+/// The packages created for a production order (cross-service gap X-17). <c>ProductionDate</c> and
+/// <c>OrderStatus</c> are null when the order itself is not stored (GET daily-order does not persist it).
+/// </summary>
+public sealed record ProductionOrderPackagesResponse(
+    Guid ProductionOrderId,
+    DateTime? ProductionDate,
+    string? OrderStatus,
+    int TotalPackages,
+    List<PackageDetail> Packages
+);
+
+public sealed record PackageDetail(
+    Guid PackageId,
+    Guid PatientId,
+    Guid CatalogPlanId,
+    string Status,
+    string? TrackingNumber,
+    string? DeliveryAddress,
+    DateTime? ValidatedAt
+);
