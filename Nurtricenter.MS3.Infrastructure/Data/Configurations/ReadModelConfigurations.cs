@@ -50,3 +50,35 @@ public sealed class InboxMessageConfiguration : IEntityTypeConfiguration<InboxMe
         builder.HasIndex(m => m.ProcessedOn);
     }
 }
+
+public sealed class ScheduledDeliveryConfiguration : IEntityTypeConfiguration<ScheduledDelivery>
+{
+    public void Configure(EntityTypeBuilder<ScheduledDelivery> builder)
+    {
+        builder.ToTable("ScheduledDeliveries");
+
+        builder.HasKey(d => d.DeliveryDayId);
+        builder.Property(d => d.DeliveryDayId).ValueGeneratedNever();
+        builder.Property(d => d.DeliveryDate).IsRequired();
+        builder.Property(d => d.Hour).HasMaxLength(8);
+        builder.Property(d => d.Address).IsRequired().HasMaxLength(500);
+        builder.Property(d => d.MenuJson).IsRequired();
+        builder.Property(d => d.SnapshotAt).IsRequired();
+
+        builder.HasIndex(d => d.DeliveryDate);
+    }
+}
+
+public sealed class ClinicPatientConfiguration : IEntityTypeConfiguration<ClinicPatient>
+{
+    public void Configure(EntityTypeBuilder<ClinicPatient> builder)
+    {
+        builder.ToTable("ClinicPatients");
+
+        builder.HasKey(p => p.PatientId);
+        builder.Property(p => p.PatientId).ValueGeneratedNever();
+        builder.Property(p => p.FullName).IsRequired().HasMaxLength(300);
+        builder.Property(p => p.Phone).HasMaxLength(50);
+        builder.Property(p => p.SnapshotAt).IsRequired();
+    }
+}

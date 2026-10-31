@@ -22,6 +22,8 @@ public sealed class ApplicationDbContext : DbContext
     public DbSet<CatalogPlan> CatalogPlans => Set<CatalogPlan>();
     public DbSet<CatalogRecipe> CatalogRecipes => Set<CatalogRecipe>();
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+    public DbSet<ScheduledDelivery> ScheduledDeliveries => Set<ScheduledDelivery>();
+    public DbSet<ClinicPatient> ClinicPatients => Set<ClinicPatient>();
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)

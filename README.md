@@ -31,16 +31,18 @@ Gestionar el ciclo completo desde que un paciente selecciona un plan hasta que s
 
 | Origen | Destino | Propósito | Endpoint Sim |
 |--------|---------|-----------|-------------|
-| MS3 | MS1 | Validar paciente y obtener nombre | `GET /api/v1/sim/patients/{id}` |
+| MS3 | MS1 | Validar paciente y obtener nombre | `GET /api/v1/sim/patients/{id}` (platform: projection of the `paciente-published` event) |
 | MS3 | MS2 | Validar plan y obtener costo | `GET /api/v1/sim/catalog/plans/{id}` |
 | MS3 | MS2 | Obtener estructura de recetas (batch) | `POST /api/v1/sim/catalog/plans/structure` |
-| MS3 | MS4 | Obtener calendarios activos (mañana) | `GET /api/v1/sim/calendars/active-tomorrow` |
-| MS3 → | MS4 | Evento: crear calendario post-pago | `GET /api/v1/sim/outgoing/CreateSchedule` |
+| MS3 | MS4 | Obtener calendarios activos (mañana) | `GET /api/v1/sim/calendars/active-tomorrow` (platform: projection of the `production-order-ready` event) |
+| MS3 → | MS4 | Evento: crear calendario post-pago | `GET /api/v1/sim/outgoing/CreateSchedule` (platform: published as `contract-activated`) |
 | MS3 → | MS5 | Evento: transferir paquetes validados | `GET /api/v1/sim/outgoing/TransferToLogistics` |
 
-En la plataforma del equipo, MS4 es real: MS3 llama a su `POST /schedule` y a su
-`GET /calendars/active-tomorrow` con la service account `ms3-service`, y MS2 y MS5
-se integran por RabbitMQ. Los endpoints `sim` siguen sirviendo en modo standalone.
+On the team platform MS3 makes no REST call to any service: everything goes over RabbitMQ.
+It publishes `contract-activated` (MS4 creates the calendar) and `package-validated` (MS5), and
+it projects locally MS2's plans and recipes, MS1's `paciente-published` and MS4's
+`production-order-ready` (enabled with `Projections__Enabled=true`). The `sim` endpoints keep
+serving in standalone mode.
 Detalle en [docs/INTEGRACION_PLATAFORMA.md](docs/INTEGRACION_PLATAFORMA.md).
 
 ### Tecnologías

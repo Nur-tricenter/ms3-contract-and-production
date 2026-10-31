@@ -18,17 +18,21 @@ Las reglas del equipo para eventos, contratos y fichas viven en el repo `knowled
 ```mermaid
 flowchart LR
   MS2[MS2 Catálogo] -. meal-plan-published / recipe-published / recipe-updated .-> MS3
-  MS3[MS3 Contratación y Producción] -- "POST /schedule (JWT ms3-service)" --> MS4[MS4 Calendario]
-  MS3 -- "GET /calendars/active-tomorrow (JWT ms3-service)" --> MS4
+  MS1[MS1 Clínica] -. paciente-published .-> MS3
+  MS3[MS3 Contratación y Producción] -. contract-activated .-> MS4[MS4 Calendario]
+  MS4 -. production-order-ready .-> MS3
   MS3 -. package-validated .-> MS5[MS5 Logística]
 ```
 
-Flecha continua = REST a través del gateway. Punteada = evento por RabbitMQ.
+Every arrow is a RabbitMQ event: there is no REST between services (only a browser or the demo console, through
+the gateway).
 
 | Con | Dirección | Medio | Por qué |
 |---|---|---|---|
 | MS2 | MS2 → MS3 | Eventos | MS3 solo necesita una copia local de planes y recetas; no consulta a MS2 en cada request |
-| MS4 | MS3 → MS4 | REST con JWT | Es el diseño de MS4: `POST /schedule` es idempotente por `contractId` y `active-tomorrow` es una consulta puntual de la noche anterior |
+| MS1 | MS1 → MS3 | Evento | MS3 only needs a local copy of the patients (contract check, label name and phone) |
+| MS4 | MS3 → MS4 | Evento | `ContractActivated`: MS4 creates the calendar (idempotent by contract id) |
+| MS4 | MS4 → MS3 | Evento | `ProductionOrderReady`: the next-day deliveries, projected locally |
 | MS5 | MS3 → MS5 | Evento | Un hecho de MS3 ("paquete validado") que logística toma cuando quiera; MS5 todavía no lo consume |
 
 ## Qué se copió de la plataforma
@@ -40,9 +44,9 @@ Flecha continua = REST a través del gateway. Punteada = evento por RabbitMQ.
 | Proceso API + proceso Worker | `Nurtricenter.Api` + `Nurtricenter.MS3.WorkerService` |
 | Outbox transaccional drenado por el worker | Tabla `OutgoingIntegrationEvents` + `OutboxRelay` |
 | Inbox idempotente (claim + proyección en un solo `SaveChanges`) | `IdempotentConsumer<T, TInner>` + tabla `InboxMessages` |
-| Service account para llamadas servicio → servicio (como `ms4-service`) | `ms3-service` + `Infrastructure/DeliveryCalendar/ServiceAccountTokenHandler` |
 | Auto-registro en Consul con check HTTP a `/health` | `Infrastructure/Discovery/ServiceRegistration` |
 | Fragmento compose de plataforma + compose standalone | `contracting.compose.yml` + `docker-compose.yml` |
+| Flag `Projections__Enabled` (platform only) | `MessagingExtensions.AddCatalogProjections` → `ProjectedDataSimulationService` |
 | Flags `Migrations__ApplyOnStartup`, `Seed__Enabled`, `Swagger__Enabled` | `Program.cs` de la API (por defecto siguen a `IsDevelopment()`) |
 
 ## MS2 → MS3: eventos del catálogo
@@ -62,80 +66,66 @@ decora `ISimulationService`:
 - **`GetRecipeName`:** nombre real de la receta en la orden de producción diaria;
   si no se conoce, se mantiene `Recipe-xxxxxxxx`.
 
-## MS3 → MS1: pacientes reales
+## MS1 → MS3: patients (event `paciente-published`)
 
-Con `Clinic__BaseUrl` configurado (en la plataforma `http://gateway:8080`), `ClinicSimulationService`
-reemplaza a los 3 pacientes simulados: `GetPatient` llama a
-`GET /api/clinica-nutricional/v1/Patient/{id}` con el JWT de `ms3-service` (MS1 solo exige un token
-válido, sin scopes) y arma el nombre con `nombre` + `apellido`. Un `404` de MS1 se traduce en
-`PATIENT_NOT_FOUND`; cualquier otro error propaga como 500. Sin `Clinic__BaseUrl` (standalone) siguen
-los pacientes simulados.
+MS3 no longer calls MS1. MS1 publishes the kernel contract `PatientPublished` (patient id, document, first and
+last name, phone) to `paciente-published` when a patient is created; the queue `ms3.paciente-published` feeds
+`PatientPublishedConsumer`, which upserts the `ClinicPatients` table (a snapshot older than the stored row is
+ignored). With `Projections__Enabled=true` (the platform) `ProjectedDataSimulationService.GetPatient` reads that
+table: the full name is `FirstName` + `LastName`, the phone feeds the package label, and an unknown patient is
+`PATIENT_NOT_FOUND` (404) — also when the sample data knows the id. Without the flag (standalone) the 3 simulated
+patients stay.
 
-## MS3 → MS4: REST con la service account `ms3-service`
+Known limit: there is no backfill. A patient created before the deploy is not projected, so a contract for it
+answers 404 until MS1 publishes it again.
 
-MS3 llama a MS4 a través del gateway (`DeliveryCalendar__BaseUrl`, en la plataforma
-`http://gateway:8080`). Usa un JWT de la service account `ms3-service`, que
-`start-stack` crea en identity con los scopes `deliveryCalendar.calendar:create` y
-`deliveryCalendar.productionOrder:read`.
+## MS3 → MS4: event `contract-activated`
 
-`ServiceAccountTokenProvider` inicia sesión en
-`/api/identity-service/v1/auth/login`, cachea el token hasta 60 s antes de que
-expire, y lo agrega como `Bearer` en cada llamada a MS4. Si MS4 responde 401 a un GET,
-renueva el token y reintenta una vez.
+MS3 no longer calls MS4 over HTTP and no longer needs the `ms3-service` token for it (the account still exists in
+identity because the demo console's security view uses it).
 
-### Crear el calendario al cobrar el contrato: `POST /api/delivery-calendar/v1/schedule`
-
-1. `POST /api/v1/billing/charge-plan` activa el contrato y guarda en el outbox una
-   fila `CreateSchedule` en la misma transacción. Su payload incluye:
-   - **`durationDays`:** duración del plan (`ISimulationService.GetPlan`: simulado o
-     proyectado desde MS2).
-   - **`startDate`:** el día siguiente al pago (UTC).
-2. El worker (`OutboxRelay`) la entrega como `POST /schedule`:
+1. `POST /api/v1/billing/charge-plan` activates the contract and stores a `CreateSchedule` row in the outbox in the
+   same transaction. Its payload carries `durationDays` (from `ISimulationService.GetPlan`: simulated or projected
+   from MS2) and `startDate` (the day after the payment, UTC).
+2. The worker (`OutboxRelay`) publishes it as `ContractActivated` to the `contract-activated` exchange
+   (`declareDestination: true`). The outbox row id is the message id, so a redelivery after a lost ack carries the
+   same `Id` and MS4's inbox drops it.
 
    ```json
-   { "contractId": "…", "patientId": "…", "planId": "…", "duration": 30, "startDate": "2026-10-25" }
+   { "ContractId": "…", "PatientId": "…", "CatalogPlanId": "…", "DurationDays": 30, "StartDate": "2026-10-25" }
    ```
 
-3. Resultado:
+3. MS4 consumes it from `ms4.contract-activated` and creates the calendar (idempotent by contract id). Data MS4
+   rejects (duration that is not 15/30 or that contradicts the plan) is logged and acknowledged there; MS3 does not
+   learn about it.
 
-| Respuesta de MS4 | Estado de la fila | Qué significa |
-|---|---|---|
-| 200 | `Published` | Calendario creado, o ya existía para ese `contractId` (MS4 es idempotente) |
-| 400 / 422 | `Rejected` | MS4 no acepta el calendario (p. ej. la duración no es 15 ni 30). No se reintenta |
-| 401, 5xx, red caída | sigue `Simulated` | Se reintenta en el siguiente ciclo del worker |
-| `DeliveryCalendar__BaseUrl` sin configurar | `Unroutable` | Modo standalone, sin MS4 |
-| Payload sin `durationDays` (plan desconocido) | `Rejected` | MS4 necesita la duración |
-
-### Orden de producción: `GET /api/delivery-calendar/v1/calendars/active-tomorrow?date=`
-
-Con MS4 configurado, `DeliveryCalendarSimulationService` reemplaza los calendarios
-simulados. Los usan la orden diaria (`GET /v1/production/daily-order`), la etiqueta
-y la validación de paquetes. La respuesta de MS4 se traduce al modelo de MS3:
-
-| MS4 (`ActiveTomorrowLineDto`) | MS3 (`SimActiveCalendar`) |
+| Outbox row | Meaning |
 |---|---|
-| `packId` (int) | `PackageId` (GUID derivado: `000000xx-0000-0000-0000-000000000000`) |
-| `patientId`, `planId` | iguales |
-| `address`, `latitude`, `longitude` | iguales |
-| `hour` | `DeliveryTime` (`HH:mm`, vacío si es `null`) |
-| `menu` (`mealTime`, `mealTimeOrder`, `recipeId`, `recipeName`, `rations`) | `Menu` (`SimMenuItem`: tiempo de comida, receta, nombre, raciones), ordenado por `mealTimeOrder` |
+| `Published` | The broker accepted the message |
+| `Rejected` | The payload has no `durationDays` (unknown plan): MS4 could not build a calendar, no retry would help |
+| `Simulated` (pending) | Broker down; retried every 5 s |
 
-`menu` es la foto del menú del día que MS4 toma en `resolve-daily-catalog`
-consultando a MS2. Es un campo **nuevo** que MS3 le propone a MS4 (rama
-`feat/active-tomorrow-menu` de `ms4-delivery-schedule-management`). Sin él, MS3 no
-sabe qué recetas lleva un plan real de MS2, porque la composición del plan solo la
-tiene MS2 y MS4 ya la resolvió.
+## MS4 → MS3: next-day deliveries (event `production-order-ready`)
 
-La orden diaria (`GetDailyOrderQueryHandler`) arma sus ítems así:
+MS3 no longer calls `GET /calendars/active-tomorrow`. After `resolve-daily-catalog`, MS4 publishes the kernel
+contract `ProductionOrderReady` — a full snapshot of one delivery date's order — to `production-order-ready`. The
+queue `ms3.production-order-ready` feeds `ProductionOrderReadyConsumer`, which replaces the `ScheduledDeliveries`
+rows of that `DeliveryDate` (a snapshot older than the stored rows is ignored; a day that moved date is matched by
+its id). With `Projections__Enabled=true`, `ProjectedDataSimulationService.GetActiveCalendars` serves them to the
+daily order (`GET /v1/production/daily-order`), the label and the validation:
 
-1. Si el calendario trae `menu`, suma `rations` por receta con el nombre que vino de MS4.
-2. Si no lo trae (MS4 sin el cambio, o standalone), usa la estructura simulada del plan.
-3. Si con eso no hay ninguna receta, responde **422 `NO_RECIPES`** con un mensaje
-   claro y no crea la orden. Antes era un 500 por la excepción del dominio.
+| `ProductionOrderReady` line | MS3 (`SimActiveCalendar`) |
+|---|---|
+| `DeliveryDayId` (int) | `PackageId` (derived Guid: `000000xx-0000-0000-0000-000000000000`) and `DeliveryDayId` |
+| `PatientId`, `PlanId` | same |
+| `Address`, `Latitude`, `Longitude` | same |
+| `Hour` (`HH:mm` or `null`) | `DeliveryTime` (empty when `null`) |
+| `Menu` (meal time, order, recipe id and name, rations) | `Menu` (`SimMenuItem`), ordered by meal time order |
 
-Si MS4 no responde, la orden diaria devuelve error: no hay forma honesta de
-producir sin saber qué entregar. Si el job de MS4 no corrió, `active-tomorrow`
-devuelve `[]` y la orden responde 404 `NO_CALENDARS`.
+The daily order (`GetDailyOrderQueryHandler`) builds its items as before: it sums `rations` per recipe from the
+menu; without a menu (standalone) it uses the simulated plan structure; with no recipe at all it answers **422
+`NO_RECIPES`**. If MS4 has not published an order for the date, there are no deliveries and the daily order answers
+404 `NO_CALENDARS`; unlike before there is no MS4 outage error, because nothing is called.
 
 ## MS3 → MS5: evento `package-validated`
 
@@ -176,9 +166,9 @@ devuelve `[]` y la orden responde 404 `NO_CALENDARS`.
 
 ```
 Simulated ──entrega OK──────────────────────▶ Published (PublishedAt)
-    ├── MS4 rechaza (400/422) o falta duración ─▶ Rejected
+    ├── falta duración del plan ────────────────▶ Rejected
     ├── sin destino o payload inválido ─────────▶ Unroutable
-    └── broker o MS4 caídos ────────────────────▶ sigue Simulated (reintento cada 5 s)
+    └── broker caído ───────────────────────────▶ sigue Simulated (reintento cada 5 s)
 ```
 
 `Simulated` significa "pendiente" (`OutgoingIntegrationEvent.PendingStatus`); el

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Nurtricenter.MS3.Core.Simulations;
 using Nurtricenter.MS3.Infrastructure.Data;
-using Nurtricenter.MS3.Infrastructure.DeliveryCalendar;
+using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Contracting;
 using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Production;
 
 namespace Nurtricenter.MS3.Infrastructure.Messaging;
@@ -19,20 +19,20 @@ public sealed class OutboxRelay
 
     public const string PackageValidatedExchange = "package-validated";
 
-    public static IReadOnlyList<string> PublishedExchanges { get; } = [PackageValidatedExchange];
+    public const string ContractActivatedExchange = "contract-activated";
+
+    public static IReadOnlyList<string> PublishedExchanges { get; } = [PackageValidatedExchange, ContractActivatedExchange];
 
     private static readonly JsonSerializerOptions PayloadOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly ApplicationDbContext _context;
     private readonly IExternalPublisher _publisher;
-    private readonly IDeliveryCalendarClient _deliveryCalendar;
     private readonly ILogger<OutboxRelay> _logger;
 
-    public OutboxRelay(ApplicationDbContext context, IExternalPublisher publisher, IDeliveryCalendarClient deliveryCalendar, ILogger<OutboxRelay> logger)
+    public OutboxRelay(ApplicationDbContext context, IExternalPublisher publisher, ILogger<OutboxRelay> logger)
     {
         _context = context;
         _publisher = publisher;
-        _deliveryCalendar = deliveryCalendar;
         _logger = logger;
     }
 
@@ -59,17 +59,17 @@ public sealed class OutboxRelay
 
                 await delivery;
             }
+            catch (UnpublishableEventException exception)
+            {
+                outgoingEvent.MarkAsRejected();
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogWarning(exception, "Event {EventId} ({EventType}) cannot be published; marked as {Status}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.Status);
+                continue;
+            }
             catch (JsonException exception)
             {
                 _logger.LogWarning(exception, "Event {EventId} ({EventType}) has a malformed payload.", outgoingEvent.Id, outgoingEvent.EventType);
                 await MarkAsUnroutableAsync(outgoingEvent, "its payload is malformed", cancellationToken);
-                continue;
-            }
-            catch (DeliveryCalendarRejectedException exception)
-            {
-                outgoingEvent.MarkAsRejected();
-                await _context.SaveChangesAsync(cancellationToken);
-                _logger.LogWarning(exception, "Event {EventId} ({EventType}) was rejected by {TargetService}; marked as {Status}.", outgoingEvent.Id, outgoingEvent.EventType, outgoingEvent.TargetService, outgoingEvent.Status);
                 continue;
             }
 
@@ -92,24 +92,32 @@ public sealed class OutboxRelay
 
     private Task? Deliver(OutgoingIntegrationEvent outgoingEvent, CancellationToken cancellationToken) => outgoingEvent.EventType switch
     {
-        CreateScheduleEventType when _deliveryCalendar.IsEnabled => _deliveryCalendar.ScheduleAsync(ToScheduleRequest(outgoingEvent), cancellationToken),
+        CreateScheduleEventType => PublishContractActivated(outgoingEvent),
         TransferToLogisticsEventType => _publisher.PublishAsync(ToPackageValidated(outgoingEvent), PackageValidatedExchange, declareDestination: true),
         _ => null
     };
 
-    private static ScheduleDeliveriesRequest ToScheduleRequest(OutgoingIntegrationEvent outgoingEvent)
+    private Task PublishContractActivated(OutgoingIntegrationEvent outgoingEvent)
     {
         var payload = ReadPayload<CreateSchedulePayload>(outgoingEvent);
 
+        // MS4 cannot build a calendar without the plan duration, and no retry would add it.
         if (payload.DurationDays is null)
-            throw new DeliveryCalendarRejectedException(0, $"Event {outgoingEvent.Id} has no plan duration; MS4 needs it to build the calendar.");
+            throw new UnpublishableEventException($"Event {outgoingEvent.Id} has no plan duration; MS4 needs it to build the calendar.");
 
-        return new ScheduleDeliveriesRequest(
-            payload.ContractId,
-            payload.PatientId,
-            payload.CatalogPlanId,
-            payload.DurationDays.Value,
-            payload.StartDate ?? DateOnly.FromDateTime(outgoingEvent.CreatedAt.AddDays(1)));
+        var message = new ContractActivated(outgoingEvent.Id.ToString(), Source)
+        {
+            // The outbox row id is the message id, so a redelivery after a lost ack is a duplicate MS4's inbox drops.
+            Id = outgoingEvent.Id,
+            CreatedAt = AsUtc(outgoingEvent.CreatedAt),
+            ContractId = payload.ContractId,
+            PatientId = payload.PatientId,
+            CatalogPlanId = payload.CatalogPlanId,
+            DurationDays = payload.DurationDays.Value,
+            StartDate = payload.StartDate ?? DateOnly.FromDateTime(outgoingEvent.CreatedAt.AddDays(1))
+        };
+
+        return _publisher.PublishAsync(message, ContractActivatedExchange, declareDestination: true);
     }
 
     private static PackageValidated ToPackageValidated(OutgoingIntegrationEvent outgoingEvent)
@@ -143,6 +151,8 @@ public sealed class OutboxRelay
 
     private static DateTimeOffset AsUtc(DateTime value)
         => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
+
+    private sealed class UnpublishableEventException(string message) : Exception(message);
 
     private sealed record CreateSchedulePayload(Guid ContractId, Guid PatientId, Guid CatalogPlanId, int? DurationDays, DateOnly? StartDate);
 

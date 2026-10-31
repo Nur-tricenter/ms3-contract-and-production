@@ -3,6 +3,8 @@ using Joseco.Communication.External.RabbitMQ.Services;
 using Nurtricenter.MS3.Infrastructure.Messaging;
 using Nurtricenter.MS3.Infrastructure.Messaging.Consumers;
 using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Catalog;
+using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Clinic;
+using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.DeliveryCalendar;
 
 namespace Nurtricenter.MS3.WorkerService;
 
@@ -29,6 +31,8 @@ public static class RabbitMqExtensions
         services.AddRabbitMqConsumer<MealPlanPublished, IdempotentConsumer<MealPlanPublished, MealPlanPublishedConsumer>>(MessagingExtensions.MealPlanPublishedQueue);
         services.AddRabbitMqConsumer<RecipePublished, IdempotentConsumer<RecipePublished, RecipePublishedConsumer>>(MessagingExtensions.RecipePublishedQueue);
         services.AddRabbitMqConsumer<RecipeUpdated, IdempotentConsumer<RecipeUpdated, RecipeUpdatedConsumer>>(MessagingExtensions.RecipeUpdatedQueue);
+        services.AddRabbitMqConsumer<ProductionOrderReady, IdempotentConsumer<ProductionOrderReady, ProductionOrderReadyConsumer>>(MessagingExtensions.ProductionOrderReadyQueue);
+        services.AddRabbitMqConsumer<PatientPublished, IdempotentConsumer<PatientPublished, PatientPublishedConsumer>>(MessagingExtensions.PatientPublishedQueue);
 
         return services;
     }

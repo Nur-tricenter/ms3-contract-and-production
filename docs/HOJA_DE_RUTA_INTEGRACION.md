@@ -1,5 +1,10 @@
 # Hoja de ruta: MS3 integrado con el equipo
 
+> **Update (async messaging change):** the REST calls this roadmap describes (MS3 → MS4 `POST /schedule` and
+> `GET /active-tomorrow`, MS3 → MS1 `GET Patient/{id}`) were replaced by events (`contract-activated`,
+> `production-order-ready`, `paciente-published`). The roadmap is kept as history; see
+> [INTEGRACION_PLATAFORMA.md](INTEGRACION_PLATAFORMA.md) for the current design.
+
 Qué está hecho, qué falta, quién lo hace y cómo probarlo mientras falta MS1.
 Estado al 2026-10-24. La plataforma completa ya se probó de punta a punta con
 servicios reales (detalle al final de PRUEBAS_INTEGRACION.md).

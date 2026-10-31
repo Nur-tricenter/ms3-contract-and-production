@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Nurtricenter.MS3.Core.Simulations;
 using Nurtricenter.MS3.Infrastructure.Messaging;
+using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Contracting;
 using Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Production;
 
 namespace Nurtricenter.MS3.IntegrationTests.Messaging;
@@ -11,7 +12,6 @@ public sealed class OutboxRelayTests : IDisposable
 {
     private readonly BaseDeDatosEnMemoria _baseDeDatos = new();
     private readonly BrokerEnMemoria _broker = new();
-    private readonly CalendarioEnMemoria _ms4 = new();
 
     public void Dispose() => _baseDeDatos.Dispose();
 
@@ -39,7 +39,7 @@ public sealed class OutboxRelayTests : IDisposable
     private async Task<int> EjecutarRelayAsync()
     {
         await using var context = _baseDeDatos.CrearContexto();
-        var relay = new OutboxRelay(context, _broker, _ms4, NullLogger<OutboxRelay>.Instance);
+        var relay = new OutboxRelay(context, _broker, NullLogger<OutboxRelay>.Instance);
         return await relay.PublishPendingAsync();
     }
 
@@ -50,7 +50,7 @@ public sealed class OutboxRelayTests : IDisposable
     }
 
     [Fact]
-    public async Task Relay_entrega_CreateSchedule_a_MS4_como_POST_schedule()
+    public async Task Relay_publishes_CreateSchedule_as_ContractActivated_on_its_exchange()
     {
         var contratoId = Guid.NewGuid();
         var evento = await RegistrarCreateScheduleAsync(contratoId, 30, "2026-10-25");
@@ -58,11 +58,15 @@ public sealed class OutboxRelayTests : IDisposable
         var entregados = await EjecutarRelayAsync();
 
         entregados.Should().Be(1);
-        var calendario = _ms4.CalendariosCreados.Should().ContainSingle().Subject;
-        calendario.ContractId.Should().Be(contratoId);
-        calendario.Duration.Should().Be(30);
-        calendario.StartDate.Should().Be(new DateOnly(2026, 10, 25));
-        _broker.Publicados.Should().BeEmpty();
+        var (mensaje, exchange, tipoDeclarado) = _broker.Publicados.Should().ContainSingle().Subject;
+        exchange.Should().Be("contract-activated");
+        tipoDeclarado.Should().Be(typeof(ContractActivated));
+        var activado = mensaje.Should().BeOfType<ContractActivated>().Subject;
+        activado.Id.Should().Be(evento.Id); // the outbox row id is the message id: a redelivery is a duplicate for MS4's inbox
+        activado.Source.Should().Be("contracting");
+        activado.ContractId.Should().Be(contratoId);
+        activado.DurationDays.Should().Be(30);
+        activado.StartDate.Should().Be(new DateOnly(2026, 10, 25));
         var persistido = await LeerEventoAsync(evento.Id);
         persistido.Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
         persistido.PublishedAt.Should().NotBeNull();
@@ -75,7 +79,8 @@ public sealed class OutboxRelayTests : IDisposable
 
         await EjecutarRelayAsync();
 
-        _ms4.CalendariosCreados.Should().ContainSingle()
+        _broker.Publicados.Should().ContainSingle()
+            .Which.Mensaje.Should().BeOfType<ContractActivated>()
             .Which.StartDate.Should().Be(DateOnly.FromDateTime(evento.CreatedAt.AddDays(1)));
     }
 
@@ -86,45 +91,22 @@ public sealed class OutboxRelayTests : IDisposable
 
         await EjecutarRelayAsync();
 
-        _ms4.CalendariosCreados.Should().BeEmpty();
+        _broker.Publicados.Should().BeEmpty();
         (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.RejectedStatus);
     }
 
     [Fact]
-    public async Task Relay_marca_como_Rejected_cuando_MS4_rechaza_el_calendario()
-    {
-        var evento = await RegistrarCreateScheduleAsync(duracion: 7);
-        _ms4.RechazarCalendario = true;
-
-        await EjecutarRelayAsync();
-
-        (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.RejectedStatus);
-    }
-
-    [Fact]
-    public async Task Relay_deja_CreateSchedule_pendiente_cuando_MS4_no_responde()
+    public async Task Relay_leaves_CreateSchedule_pending_when_the_broker_fails()
     {
         var evento = await RegistrarCreateScheduleAsync();
-        _ms4.FallarAlLlamar = true;
+        _broker.FallarAlPublicar = true;
 
         var ejecutar = () => EjecutarRelayAsync();
 
-        await ejecutar.Should().ThrowAsync<HttpRequestException>();
+        await ejecutar.Should().ThrowAsync<InvalidOperationException>();
         var persistido = await LeerEventoAsync(evento.Id);
         persistido.Status.Should().Be(OutgoingIntegrationEvent.PendingStatus);
         persistido.PublishedAt.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Relay_marca_como_Unroutable_un_CreateSchedule_cuando_MS4_no_esta_configurado()
-    {
-        var evento = await RegistrarCreateScheduleAsync();
-        _ms4.IsEnabled = false;
-
-        await EjecutarRelayAsync();
-
-        _ms4.CalendariosCreados.Should().BeEmpty();
-        (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
     }
 
     [Fact]
@@ -205,7 +187,7 @@ public sealed class OutboxRelayTests : IDisposable
         var segundaPasada = await EjecutarRelayAsync();
 
         segundaPasada.Should().Be(0);
-        _ms4.CalendariosCreados.Should().ContainSingle();
+        _broker.Publicados.Should().ContainSingle();
     }
 
     [Fact]
@@ -216,7 +198,6 @@ public sealed class OutboxRelayTests : IDisposable
         await EjecutarRelayAsync();
 
         _broker.Publicados.Should().BeEmpty();
-        _ms4.CalendariosCreados.Should().BeEmpty();
         (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
     }
 
@@ -235,7 +216,7 @@ public sealed class OutboxRelayTests : IDisposable
 
         (await LeerEventoAsync(malformado.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
         (await LeerEventoAsync(valido.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
-        _ms4.CalendariosCreados.Should().ContainSingle();
+        _broker.Publicados.Should().ContainSingle();
     }
 
     [Fact]
