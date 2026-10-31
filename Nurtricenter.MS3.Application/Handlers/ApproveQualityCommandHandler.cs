@@ -58,6 +58,7 @@ public sealed class ApproveQualityCommandHandler : IRequestHandler<ApproveQualit
             packageId = package.Id,
             package.PatientId,
             patientName = package.Label?.PatientName,
+            patientPhone = LookUpPatientPhone(package.PatientId),
             package.ProductionOrderId,
             package.CatalogPlanId,
             status = "validatedAndReleased",
@@ -75,5 +76,21 @@ public sealed class ApproveQualityCommandHandler : IRequestHandler<ApproveQualit
         await _unitOfWork.CommitAsync(cancellationToken);
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// The phone is a courtesy for the courier. By now the package is already approved and committed, so an
+    /// unreachable clinic service must not stop the release event from being written.
+    /// </summary>
+    private string? LookUpPatientPhone(Guid patientId)
+    {
+        try
+        {
+            return _sim.GetPatient(patientId)?.Phone;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

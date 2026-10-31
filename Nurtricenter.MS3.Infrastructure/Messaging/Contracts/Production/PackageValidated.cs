@@ -27,4 +27,5 @@ public record PackageValidated : IntegrationMessage
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }
     public int? DeliveryDayId { get; init; }
+    public string? PatientPhone { get; init; }
 }
