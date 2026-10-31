@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nurtricenter.MS3.Application.Simulations;
+using Nurtricenter.MS3.Infrastructure.Clinic;
 using Nurtricenter.MS3.Infrastructure.Data;
 using Nurtricenter.MS3.Infrastructure.DeliveryCalendar;
 using Nurtricenter.MS3.Infrastructure.Messaging.Consumers;
@@ -27,6 +28,11 @@ public static class MessagingExtensions
 
             if (deliveryCalendar.IsEnabled)
                 inner = new DeliveryCalendarSimulationService(inner, deliveryCalendar);
+
+            var clinic = sp.GetRequiredService<IClinicClient>();
+
+            if (clinic.IsEnabled)
+                inner = new ClinicSimulationService(inner, clinic);
 
             return new CatalogProjectionSimulationService(inner, sp.GetRequiredService<ApplicationDbContext>());
         });
