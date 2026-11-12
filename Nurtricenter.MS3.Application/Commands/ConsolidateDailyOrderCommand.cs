@@ -11,6 +11,6 @@ namespace Nurtricenter.MS3.Application.Commands;
 /// to build the list of ProductionItems.
 /// </summary>
 public sealed record ConsolidateDailyOrderCommand(
-    DateTime ProductionDate,
-    List<ProductionItem> Items
+	DateTime ProductionDate,
+	List<ProductionItem> Items
 ) : IRequest<Result<DailyProductionOrder>>;

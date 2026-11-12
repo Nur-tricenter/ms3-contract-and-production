@@ -6,19 +6,19 @@ namespace Nurtricenter.MS3.IntegrationTests.Messaging;
 
 public sealed class BaseDeDatosEnMemoria : IDisposable
 {
-    private readonly SqliteConnection _connection;
+	private readonly SqliteConnection _connection;
 
-    public BaseDeDatosEnMemoria()
-    {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+	public BaseDeDatosEnMemoria()
+	{
+		_connection = new SqliteConnection("DataSource=:memory:");
+		_connection.Open();
 
-        using var context = CrearContexto();
-        context.Database.EnsureCreated();
-    }
+		using var context = CrearContexto();
+		context.Database.EnsureCreated();
+	}
 
-    public ApplicationDbContext CrearContexto()
-        => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options);
+	public ApplicationDbContext CrearContexto()
+		=> new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options);
 
-    public void Dispose() => _connection.Dispose();
+	public void Dispose() => _connection.Dispose();
 }

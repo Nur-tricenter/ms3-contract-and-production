@@ -12,50 +12,50 @@ namespace Nurtricenter.MS3.Application.Handlers;
 
 public sealed class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentCommand, Result<PaymentResponse>>
 {
-    private readonly IContractRepository _contractRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IOutgoingEventRepository _outgoingEvents;
-    private readonly ISimulationService _sim;
+	private readonly IContractRepository _contractRepository;
+	private readonly IUnitOfWork _unitOfWork;
+	private readonly IOutgoingEventRepository _outgoingEvents;
+	private readonly ISimulationService _sim;
 
-    public ProcessPaymentCommandHandler(
-        IContractRepository contractRepository,
-        IUnitOfWork unitOfWork,
-        IOutgoingEventRepository outgoingEvents,
-        ISimulationService sim)
-    {
-        _contractRepository = contractRepository;
-        _unitOfWork = unitOfWork;
-        _outgoingEvents = outgoingEvents;
-        _sim = sim;
-    }
+	public ProcessPaymentCommandHandler(
+		IContractRepository contractRepository,
+		IUnitOfWork unitOfWork,
+		IOutgoingEventRepository outgoingEvents,
+		ISimulationService sim)
+	{
+		_contractRepository = contractRepository;
+		_unitOfWork = unitOfWork;
+		_outgoingEvents = outgoingEvents;
+		_sim = sim;
+	}
 
-    public async Task<Result<PaymentResponse>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
-    {
-        var contract = await _contractRepository.GetByIdAsync(request.ContractId);
-        if (contract is null)
-            return Result.Failure<PaymentResponse>(
-                new Error("NOT_FOUND", $"Contract {request.ContractId} not found.", ErrorType.NotFound));
+	public async Task<Result<PaymentResponse>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
+	{
+		var contract = await _contractRepository.GetByIdAsync(request.ContractId);
+		if (contract is null)
+			return Result.Failure<PaymentResponse>(
+				new Error("NOT_FOUND", $"Contract {request.ContractId} not found.", ErrorType.NotFound));
 
-        var invoice = contract.ProcessPayment(request.Amount, request.InvoiceNumber);
-        await _unitOfWork.CommitAsync(cancellationToken);
+		var invoice = contract.ProcessPayment(request.Amount, request.InvoiceNumber);
+		await _unitOfWork.CommitAsync(cancellationToken);
 
-        var plan = _sim.GetPlan(contract.CatalogPlanId);
-        var payload = JsonSerializer.Serialize(new
-        {
-            contractId = contract.Id,
-            contract.PatientId,
-            contract.CatalogPlanId,
-            invoice.InvoiceNumber,
-            invoice.TotalAmount,
-            durationDays = plan?.DurationDays,
-            startDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1))
-        });
+		var plan = _sim.GetPlan(contract.CatalogPlanId);
+		var payload = JsonSerializer.Serialize(new
+		{
+			contractId = contract.Id,
+			contract.PatientId,
+			contract.CatalogPlanId,
+			invoice.InvoiceNumber,
+			invoice.TotalAmount,
+			durationDays = plan?.DurationDays,
+			startDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1))
+		});
 
-        await _outgoingEvents.AddAsync(
-            new OutgoingIntegrationEvent("CreateSchedule", "MS4", payload), cancellationToken);
-        await _unitOfWork.CommitAsync(cancellationToken);
+		await _outgoingEvents.AddAsync(
+			new OutgoingIntegrationEvent("CreateSchedule", "MS4", payload), cancellationToken);
+		await _unitOfWork.CommitAsync(cancellationToken);
 
-        var response = new PaymentResponse(invoice.Id, "processed", DateTime.UtcNow);
-        return Result<PaymentResponse>.Success(response);
-    }
+		var response = new PaymentResponse(invoice.Id, "processed", DateTime.UtcNow);
+		return Result<PaymentResponse>.Success(response);
+	}
 }

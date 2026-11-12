@@ -5,5 +5,5 @@ namespace Nurtricenter.MS3.Application.Interfaces;
 
 public interface IDailyProductionOrderRepository : IRepository<DailyProductionOrder>
 {
-    Task<DailyProductionOrder?> GetByProductionDateAsync(DateTime date, CancellationToken cancellationToken = default);
+	Task<DailyProductionOrder?> GetByProductionDateAsync(DateTime date, CancellationToken cancellationToken = default);
 }

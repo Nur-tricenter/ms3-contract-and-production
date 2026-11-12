@@ -8,6 +8,6 @@ namespace Nurtricenter.MS3.Application.Commands;
 /// After approval, the package is ready for dispatch to MS5 Logistics.
 /// </summary>
 public sealed record ApproveQualityCommand(
-    Guid PackageId,
-    string SupervisorId
+	Guid PackageId,
+	string SupervisorId
 ) : IRequest<Result>;

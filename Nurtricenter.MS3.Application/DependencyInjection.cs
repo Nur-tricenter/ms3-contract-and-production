@@ -9,27 +9,27 @@ namespace Nurtricenter.MS3.Application;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration? configuration = null)
-    {
-        services.AddMediatR(config =>
-        {
-            config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
-        });
+	public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration? configuration = null)
+	{
+		services.AddMediatR(config =>
+		{
+			config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+		});
 
-        var mockBaseUrl = configuration?["ExternalServices:SimulationMockBaseUrl"];
+		var mockBaseUrl = configuration?["ExternalServices:SimulationMockBaseUrl"];
 
-        if (!string.IsNullOrWhiteSpace(mockBaseUrl))
-        {
-            services.AddHttpClient<ISimulationService, HttpSimulationService>(client =>
-            {
-                client.BaseAddress = new Uri(mockBaseUrl);
-            });
-        }
-        else
-        {
-            services.AddSingleton<ISimulationService, SimulationDataService>();
-        }
+		if (!string.IsNullOrWhiteSpace(mockBaseUrl))
+		{
+			services.AddHttpClient<ISimulationService, HttpSimulationService>(client =>
+			{
+				client.BaseAddress = new Uri(mockBaseUrl);
+			});
+		}
+		else
+		{
+			services.AddSingleton<ISimulationService, SimulationDataService>();
+		}
 
-        return services;
-    }
+		return services;
+	}
 }

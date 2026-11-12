@@ -10,30 +10,30 @@ namespace Nurtricenter.MS3.WorkerService;
 
 public static class RabbitMqExtensions
 {
-    public const string SectionName = "RabbitMqSettings";
+	public const string SectionName = "RabbitMqSettings";
 
-    public static IServiceCollection AddContractingRabbitMq(this IServiceCollection services, IConfiguration configuration)
-    {
-        var settings = configuration.GetSection(SectionName).Get<RabbitMqSettings>();
+	public static IServiceCollection AddContractingRabbitMq(this IServiceCollection services, IConfiguration configuration)
+	{
+		var settings = configuration.GetSection(SectionName).Get<RabbitMqSettings>();
 
-        if (settings is null || string.IsNullOrWhiteSpace(settings.Host))
-            throw new InvalidOperationException($"Configuration section '{SectionName}' is missing or has no Host.");
+		if (settings is null || string.IsNullOrWhiteSpace(settings.Host))
+			throw new InvalidOperationException($"Configuration section '{SectionName}' is missing or has no Host.");
 
-        services.AddSingleton(settings);
+		services.AddSingleton(settings);
 
-        return services.AddRabbitMQ(settings);
-    }
+		return services.AddRabbitMQ(settings);
+	}
 
-    public static IServiceCollection AddCatalogConsumers(this IServiceCollection services)
-    {
-        services.AddCatalogConsumerHandlers();
+	public static IServiceCollection AddCatalogConsumers(this IServiceCollection services)
+	{
+		services.AddCatalogConsumerHandlers();
 
-        services.AddRabbitMqConsumer<MealPlanPublished, IdempotentConsumer<MealPlanPublished, MealPlanPublishedConsumer>>(MessagingExtensions.MealPlanPublishedQueue);
-        services.AddRabbitMqConsumer<RecipePublished, IdempotentConsumer<RecipePublished, RecipePublishedConsumer>>(MessagingExtensions.RecipePublishedQueue);
-        services.AddRabbitMqConsumer<RecipeUpdated, IdempotentConsumer<RecipeUpdated, RecipeUpdatedConsumer>>(MessagingExtensions.RecipeUpdatedQueue);
-        services.AddRabbitMqConsumer<ProductionOrderReady, IdempotentConsumer<ProductionOrderReady, ProductionOrderReadyConsumer>>(MessagingExtensions.ProductionOrderReadyQueue);
-        services.AddRabbitMqConsumer<PatientPublished, IdempotentConsumer<PatientPublished, PatientPublishedConsumer>>(MessagingExtensions.PatientPublishedQueue);
+		services.AddRabbitMqConsumer<MealPlanPublished, IdempotentConsumer<MealPlanPublished, MealPlanPublishedConsumer>>(MessagingExtensions.MealPlanPublishedQueue);
+		services.AddRabbitMqConsumer<RecipePublished, IdempotentConsumer<RecipePublished, RecipePublishedConsumer>>(MessagingExtensions.RecipePublishedQueue);
+		services.AddRabbitMqConsumer<RecipeUpdated, IdempotentConsumer<RecipeUpdated, RecipeUpdatedConsumer>>(MessagingExtensions.RecipeUpdatedQueue);
+		services.AddRabbitMqConsumer<ProductionOrderReady, IdempotentConsumer<ProductionOrderReady, ProductionOrderReadyConsumer>>(MessagingExtensions.ProductionOrderReadyQueue);
+		services.AddRabbitMqConsumer<PatientPublished, IdempotentConsumer<PatientPublished, PatientPublishedConsumer>>(MessagingExtensions.PatientPublishedQueue);
 
-        return services;
-    }
+		return services;
+	}
 }

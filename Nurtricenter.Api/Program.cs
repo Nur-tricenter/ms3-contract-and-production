@@ -19,15 +19,15 @@ builder.Services.AddFastEndpoints();
 
 if (swaggerEnabled)
 {
-    builder.Services.SwaggerDocument(o =>
-    {
-        o.DocumentSettings = s =>
-        {
-            s.Title = "Nurtricenter MS3 - Contracting & Production";
-            s.Version = "v1";
-            s.Description = "Microservice for contract management, billing, and daily production/packaging operations.";
-        };
-    });
+	builder.Services.SwaggerDocument(o =>
+	{
+		o.DocumentSettings = s =>
+		{
+			s.Title = "Nurtricenter MS3 - Contracting & Production";
+			s.Version = "v1";
+			s.Description = "Microservice for contract management, billing, and daily production/packaging operations.";
+		};
+	});
 }
 
 builder.Services.AddApplication(builder.Configuration);
@@ -41,20 +41,20 @@ var app = builder.Build();
 
 if (applyMigrations || seedEnabled)
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+	using var scope = app.Services.CreateScope();
+	var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    if (applyMigrations)
-        await db.Database.MigrateAsync();
+	if (applyMigrations)
+		await db.Database.MigrateAsync();
 
-    if (seedEnabled)
-        await DatabaseSeeder.SeedAsync(db);
+	if (seedEnabled)
+		await DatabaseSeeder.SeedAsync(db);
 }
 
 if (swaggerEnabled)
 {
-    app.UseSwaggerGen();
-    app.UseSwaggerUi();
+	app.UseSwaggerGen();
+	app.UseSwaggerUi();
 }
 
 app.UseDefaultExceptionHandler();

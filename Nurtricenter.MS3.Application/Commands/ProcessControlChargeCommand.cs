@@ -11,8 +11,8 @@ namespace Nurtricenter.MS3.Application.Commands;
 /// to determine pricing.
 /// </summary>
 public sealed record ProcessControlChargeCommand(
-    Guid PatientId,
-    Guid ControlPolicyId,
-    decimal Amount,
-    string InvoiceNumber
+	Guid PatientId,
+	Guid ControlPolicyId,
+	decimal Amount,
+	string InvoiceNumber
 ) : IRequest<Result<ControlChargeResponse>>;
