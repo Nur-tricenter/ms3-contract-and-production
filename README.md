@@ -229,3 +229,23 @@ ms3-contract-and-production/
 └── docs/
     └── HAPPY_PATH.md                 # Guía de flujo happy path
 ```
+
+---
+
+## 3. Calidad de código
+
+| Pieza | Qué hace |
+|---|---|
+| SonarQube for IDE (SonarLint) | Extensión de Visual Studio que marca problemas mientras se edita. Se instala desde *Extensiones → Administrar extensiones*. |
+| `SonarAnalyzer.CSharp` | Las mismas reglas de Sonar, pero en cada `dotnet build` (en `Directory.Build.props`). Salen como advertencias, no como errores. |
+| `.editorconfig` | Estilo del repositorio. Los `.cs` se indentan con **tabs**; YAML, JSON, `.csproj` y Markdown siguen con espacios porque YAML no admite tabs. `EnforceCodeStyleInBuild` hace que el build reporte `IDE0055` si hay espacios. |
+| Husky.Net | Hooks de git versionados en `.husky/`. Se instalan solos en el primer `dotnet build` (o a mano con `dotnet tool restore && dotnet husky install`). |
+
+Hooks:
+
+- **pre-commit**: `dotnet format whitespace --verify-no-changes` sobre los `.cs` en stage. Si un archivo tiene espacios, el commit se rechaza; se corrige con `dotnet format whitespace Nurtricenter.MS3.sln`.
+- **pre-push**: `dotnet build` de la solución y las pruebas unitarias (`Nurtricenter.MS3.Tests`). Las de integración y Pact quedan fuera para que el push no tarde.
+
+Para saltarlos en un caso puntual: `HUSKY=0 git push` (o `git commit --no-verify`).
+
+La conversión de espacios a tabs está en un solo commit, registrado en `.git-blame-ignore-revs`. Para que `git blame` lo ignore: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
