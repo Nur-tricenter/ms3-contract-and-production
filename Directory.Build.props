@@ -10,4 +10,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <Target Name="InstalarHusky"
+          BeforeTargets="Restore;CollectPackageReferences"
+          Condition="'$(MSBuildProjectName)' == 'Nurtricenter.MS3.Core' And '$(HUSKY)' != '0' And Exists('$(MSBuildThisFileDirectory).git')">
+    <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="Low" StandardErrorImportance="High" />
+    <Exec Command="dotnet husky install" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="Low" StandardErrorImportance="High" />
+  </Target>
 </Project>

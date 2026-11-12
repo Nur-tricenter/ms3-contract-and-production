@@ -1,0 +1,31 @@
+{
+  "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+  "tasks": [
+    {
+      "name": "formato-tabs",
+      "group": "pre-commit",
+      "command": "dotnet",
+      "args": [
+        "format",
+        "whitespace",
+        "Nurtricenter.MS3.sln",
+        "--verify-no-changes",
+        "--include",
+        "${staged}"
+      ],
+      "include": [ "**/*.cs" ]
+    },
+    {
+      "name": "build",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": [ "build", "Nurtricenter.MS3.sln", "-nologo", "-v", "q" ]
+    },
+    {
+      "name": "pruebas-unitarias",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": [ "test", "Nurtricenter.MS3.Tests", "--no-build", "-nologo" ]
+    }
+  ]
+}
