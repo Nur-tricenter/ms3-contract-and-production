@@ -7,11 +7,12 @@ ejecución real; las pruebas corren sin Docker (SQLite y broker en memoria).
 ## Comandos
 
 ```bash
-npm install                                   # una vez: instala Husky + lint-staged
+pnpm install                                  # una vez: instala Husky + lint-staged
 dotnet build Nurtricenter.MS3.sln
 dotnet test Nurtricenter.MS3.sln              # unitarias + integración + Pact
-npm run lint                                  # formato, igual que el pre-commit
-npm run lint:fix
+pnpm lint                                     # formato, igual que el pre-commit
+pnpm lint:fix
+pnpm ci:local                                 # mismos pasos que el job build-and-test
 ```
 
 ## Skills

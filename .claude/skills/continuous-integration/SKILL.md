@@ -11,12 +11,12 @@ Este ciclo ya está construido. No lo rediseñes: ajústalo dentro de estas regl
 
 | Pieza | Ruta | Rol |
 |---|---|---|
-| Husky | `.husky/pre-commit`, `.husky/pre-push` | Hooks de git versionados. `npm install` los activa (script `prepare`). |
+| Husky | `.husky/pre-commit`, `.husky/pre-push` | Hooks de git versionados. `pnpm install` los activa (script `prepare`). |
 | lint-staged | `lint-staged.config.js` | Corre el linter solo sobre los archivos en stage. |
 | Linter / formateador | `dotnet format whitespace` + `.editorconfig` | `.cs` con tabs; YAML, JSON y Markdown con espacios. |
 | Analizador | `SonarAnalyzer.CSharp` en `Directory.Build.props` | Reglas de Sonar en cada build (advertencias). |
 | Pipeline | `.github/workflows/ci.yml` | Jobs `build-and-test` y `sonarcloud`. |
-| Instalación automática | Target `InstalarHooksGit` en `Directory.Build.props` | Hace `npm install` en el primer build local si falta `node_modules`. No corre con `CI=true` ni con `HUSKY=0`. |
+| Instalación automática | Target `InstalarHooksGit` en `Directory.Build.props` | Hace `pnpm install` en el primer build local si falta `node_modules`. No corre con `CI=true` ni con `HUSKY=0`. |
 
 ## Ciclo
 
@@ -31,11 +31,11 @@ GitHub      ->  ci.yml             ->  restore, lint, build, unitarias, integrac
 
 ```bash
 # Instalar los hooks (una vez por clon)
-npm install
+pnpm install
 
 # Lint igual que el pre-commit, sobre toda la solución
-npm run lint            # dotnet format whitespace Nurtricenter.MS3.sln --verify-no-changes
-npm run lint:fix        # corrige el formato
+pnpm lint            # dotnet format whitespace Nurtricenter.MS3.sln --verify-no-changes
+pnpm lint:fix        # corrige el formato
 
 # Mismos pasos que el job build-and-test
 dotnet restore Nurtricenter.MS3.sln
@@ -62,10 +62,10 @@ HUSKY=0 git push        # o git commit --no-verify
 
 | Síntoma | Causa | Arreglo |
 |---|---|---|
-| El commit se rechaza con `error WHITESPACE: Fix whitespace formatting` | Un `.cs` en stage tiene espacios en vez de tabs | `npm run lint:fix`, `git add` y volver a commitear |
-| `lint-staged: command not found` o el hook no corre | Falta `npm install` en este clon | `npm install` |
+| El commit se rechaza con `error WHITESPACE: Fix whitespace formatting` | Un `.cs` en stage tiene espacios en vez de tabs | `pnpm lint:fix`, `git add` y volver a commitear |
+| `lint-staged: command not found` o el hook no corre | Falta `pnpm install` en este clon | `pnpm install` |
 | `dotnet: not found` dentro del hook | El SDK no está en el `PATH` de Git Bash | Abrir una terminal nueva después de instalar el SDK de .NET 8 |
-| Job `build-and-test` falla en *Lint* | Alguien commiteó con `--no-verify` | `npm run lint:fix` y commitear |
+| Job `build-and-test` falla en *Lint* | Alguien commiteó con `--no-verify` | `pnpm lint:fix` y commitear |
 | Job `sonarcloud` falla en *Verificar SONAR_TOKEN* | Falta el secreto | Crearlo en *Settings → Secrets and variables → Actions* |
 | `sonarscanner end` dice que Automatic Analysis está activo | Los dos métodos de análisis a la vez | Desactivar Automatic Analysis en SonarCloud |
 | Sonar muestra 0 % de cobertura | No se generó `coverage.opencover.xml` | Revisar que el `dotnet test` del job tenga `--collect:"XPlat Code Coverage"` y el `Format=opencover` |

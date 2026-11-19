@@ -239,11 +239,11 @@ ms3-contract-and-production/
 | SonarQube for IDE (SonarLint) | Extensión de Visual Studio que marca problemas mientras se edita. Se instala desde *Extensiones → Administrar extensiones*. |
 | `SonarAnalyzer.CSharp` | Las mismas reglas de Sonar, pero en cada `dotnet build` (en `Directory.Build.props`). Salen como advertencias, no como errores. |
 | `.editorconfig` | Estilo del repositorio. Los `.cs` se indentan con **tabs**; YAML, JSON, `.csproj` y Markdown siguen con espacios porque YAML no admite tabs. `EnforceCodeStyleInBuild` hace que el build reporte `IDE0055` si hay espacios. |
-| Husky + lint-staged | Hooks de git versionados en `.husky/` (paquetes npm en `package.json`). Se instalan solos en el primer `dotnet build` o a mano con `npm install`. Requiere Node 20 o superior. |
+| Husky + lint-staged | Hooks de git versionados en `.husky/` (paquetes de pnpm en `package.json`). Se instalan solos en el primer `dotnet build` o a mano con `pnpm install`. Requiere Node 20 o superior y pnpm 9 o superior. |
 
 Hooks:
 
-- **pre-commit**: lint-staged toma solo los `.cs` en stage y corre `dotnet format whitespace --verify-no-changes` sobre ellos (`lint-staged.config.js`). Si un archivo tiene espacios, el commit se rechaza; se corrige con `npm run lint:fix` (o `dotnet format whitespace Nurtricenter.MS3.sln`).
+- **pre-commit**: lint-staged toma solo los `.cs` en stage y corre `dotnet format whitespace --verify-no-changes` sobre ellos (`lint-staged.config.js`). Si un archivo tiene espacios, el commit se rechaza; se corrige con `pnpm lint:fix` (o `dotnet format whitespace Nurtricenter.MS3.sln`).
 - **pre-push**: `dotnet build` de la solución y las pruebas unitarias (`Nurtricenter.MS3.Tests`). Las de integración y Pact quedan fuera para que el push no tarde.
 
 Para saltarlos en un caso puntual: `HUSKY=0 git push` (o `git commit --no-verify`).
@@ -259,7 +259,7 @@ El pipeline está en [.github/workflows/ci.yml](.github/workflows/ci.yml) y corr
 | **Build, lint y pruebas** | `dotnet restore` → `dotnet format whitespace --verify-no-changes` → `dotnet build -c Release` → pruebas unitarias → integración → Pact consumer → Pact provider. Los `.trx` quedan como artefacto `test-results`. |
 | **SonarCloud** | `dotnet sonarscanner begin` → `dotnet build` → pruebas unitarias e integración con cobertura OpenCover → `dotnet sonarscanner end`. |
 
-Comandos equivalentes en local:
+Comandos equivalentes en local (o todo junto con `pnpm ci:local`):
 
 ```bash
 dotnet restore Nurtricenter.MS3.sln

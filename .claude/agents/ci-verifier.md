@@ -35,7 +35,7 @@ reconoce, léelo con Read en `.claude/skills/continuous-integration/SKILL.md`.
 
 ## Cómo verificas
 
-- Corre lo que puedas: `npm run lint`, `dotnet build`, `dotnet test`, y
+- Corre lo que puedas: `pnpm lint`, `pnpm ci:local`, `dotnet build`, `dotnet test`, y
   `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"`.
 - Si te pasan el log de una ejecución, ubica el primer paso que falló y la
   primera línea de error; no diagnostiques por el último mensaje.
