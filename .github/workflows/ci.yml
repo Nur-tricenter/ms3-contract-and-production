@@ -97,7 +97,7 @@ jobs:
     # Los PR que vienen de forks no reciben secretos: no se analizan.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_TEST }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'nur-tricenter' }}
       SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'Nur-tricenter_ms3-contract-and-production' }}
 
@@ -135,7 +135,7 @@ jobs:
       - name: Verificar SONAR_TOKEN
         run: |
           if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::Falta el secreto SONAR_TOKEN (Settings > Secrets and variables > Actions)."
+            echo "::error::Falta el secreto SONAR_TOKEN_TEST (Settings > Secrets and variables > Actions)."
             exit 1
           fi
 

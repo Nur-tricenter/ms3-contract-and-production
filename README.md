@@ -273,7 +273,7 @@ dotnet test Nurtricenter.MS3.sln -c Release --no-build
 1. En [sonarcloud.io](https://sonarcloud.io) entrar con GitHub, importar la organización `Nur-tricenter` y analizar el repositorio `ms3-contract-and-production`.
 2. En el proyecto: *Administration → Analysis Method* → desactivar **Automatic Analysis** (el análisis lo hace el pipeline; con los dos activos el job falla).
 3. *My Account → Security* → generar un token.
-4. En GitHub: *Settings → Secrets and variables → Actions* → secreto `SONAR_TOKEN` con ese token.
+4. En GitHub: *Settings → Secrets and variables → Actions* → secreto `SONAR_TOKEN_TEST` con ese token.
 5. Si la clave del proyecto o la organización no son las de por defecto (`Nur-tricenter_ms3-contract-and-production` / `nur-tricenter`), crear las variables `SONAR_PROJECT_KEY` y `SONAR_ORGANIZATION` en la misma pantalla (pestaña *Variables*).
 
 ### Uso de IA

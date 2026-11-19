@@ -27,7 +27,7 @@ reconoce, léelo con Read en `.claude/skills/continuous-integration/SKILL.md`.
    `Nurtricenter.MS3.sln`. Los pasos con `--no-build` vienen después de un
    build con la misma `--configuration`.
 4. **Sonar**: `begin` va antes del build y `end` después de las pruebas; el
-   token sale de `secrets.SONAR_TOKEN` y nunca aparece en texto plano; las
+   token sale de `secrets.SONAR_TOKEN_TEST` y nunca aparece en texto plano; las
    rutas de `sonar.cs.opencover.reportsPaths` coinciden con donde
    `--results-directory` deja los archivos.
 5. **Secretos y alcance**: ningún archivo versionado contiene tokens, y el job

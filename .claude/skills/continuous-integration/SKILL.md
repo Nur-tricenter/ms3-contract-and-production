@@ -53,7 +53,7 @@ HUSKY=0 git push        # o git commit --no-verify
 - lint-staged entrega rutas absolutas; `lint-staged.config.js` las convierte a relativas porque `--include` las espera así. No quites esa conversión.
 - Los hooks llevan finales de línea LF (`.gitattributes`). Si se guardan con CRLF, Git Bash en Windows falla con `/usr/bin/env: 'sh\r'`.
 - Todo paso nuevo del pipeline debe poder correrse en local con el mismo comando. No uses acciones de terceros para compilar o probar.
-- El job `sonarcloud` necesita el secreto `SONAR_TOKEN`. La organización y la clave del proyecto salen de las variables `SONAR_ORGANIZATION` y `SONAR_PROJECT_KEY`, con `nur-tricenter` y `Nur-tricenter_ms3-contract-and-production` por defecto.
+- El job `sonarcloud` necesita el secreto `SONAR_TOKEN_TEST`. La organización y la clave del proyecto salen de las variables `SONAR_ORGANIZATION` y `SONAR_PROJECT_KEY`, con `nur-tricenter` y `Nur-tricenter_ms3-contract-and-production` por defecto.
 - En SonarCloud, **Automatic Analysis** debe estar desactivado. Si está activo, `sonarscanner end` falla.
 - La cobertura que ve Sonar sale de `Nurtricenter.MS3.Tests` y `Nurtricenter.MS3.IntegrationTests` en formato OpenCover. Las pruebas Pact no suman cobertura.
 - `coverage-report/`, `topology/` y las migraciones están excluidos del análisis. Si agregas código generado, exclúyelo en `sonar.exclusions` del paso *Iniciar análisis*.
