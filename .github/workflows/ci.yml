@@ -1,0 +1,170 @@
+# Continuous Integration — MS3 Contracting & Production
+#
+# Se dispara en cada push (cualquier rama) y en cada pull request hacia main.
+# Job 1 (build-and-test): restore -> lint (dotnet format) -> build -> pruebas.
+# Job 2 (sonarcloud):    análisis estático + cobertura en SonarCloud.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  SOLUTION: Nurtricenter.MS3.sln
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  HUSKY: 0
+
+jobs:
+  build-and-test:
+    name: Build, lint y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache de paquetes NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore "$SOLUTION"
+
+      - name: Lint (formato según .editorconfig)
+        run: dotnet format whitespace "$SOLUTION" --verify-no-changes --verbosity diagnostic
+
+      - name: Build
+        run: dotnet build "$SOLUTION" --configuration Release --no-restore
+
+      - name: Pruebas unitarias
+        run: >
+          dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=unit.trx" --results-directory TestResults
+
+      - name: Pruebas de integración
+        run: >
+          dotnet test Nurtricenter.MS3.IntegrationTests/Nurtricenter.MS3.IntegrationTests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=integration.trx" --results-directory TestResults
+
+      - name: Pruebas de contrato (Pact consumer)
+        run: >
+          dotnet test Nurtricenter.MS3.PactTests.Consumer/Nurtricenter.MS3.PactTests.Consumer.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=pact-consumer.trx" --results-directory TestResults
+
+      - name: Pruebas de contrato (Pact provider)
+        run: >
+          dotnet test Nurtricenter.MS3.PactTests.Provider/Nurtricenter.MS3.PactTests.Provider.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=pact-provider.trx" --results-directory TestResults
+
+      - name: Publicar resultados de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
+
+  sonarcloud:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Los PR que vienen de forks no reciben secretos: no se analizan.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'nur-tricenter' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'Nur-tricenter_ms3-contract-and-production' }}
+
+    steps:
+      - name: Checkout (historial completo para el blame de Sonar)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Instalar Java 17 (lo exige el scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: Instalar .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache de paquetes de SonarCloud
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: sonar-${{ runner.os }}
+          restore-keys: sonar-${{ runner.os }}
+
+      - name: Cache de paquetes NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Verificar SONAR_TOKEN
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::Falta el secreto SONAR_TOKEN (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
+      - name: Instalar SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Iniciar análisis
+        run: >
+          dotnet sonarscanner begin
+          /k:"$SONAR_PROJECT_KEY"
+          /o:"$SONAR_ORGANIZATION"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+          /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx"
+          /d:sonar.exclusions="coverage-report/**,topology/**,**/Migrations/**,**/bin/**,**/obj/**"
+          /d:sonar.coverage.exclusions="**/*Tests*/**,**/Program.cs,**/Migrations/**,**/DependencyInjection.cs"
+
+      - name: Build
+        run: dotnet build "$SOLUTION" --configuration Release --no-incremental
+
+      - name: Pruebas con cobertura (OpenCover)
+        run: |
+          for proyecto in Nurtricenter.MS3.Tests Nurtricenter.MS3.IntegrationTests; do
+            dotnet test "$proyecto/$proyecto.csproj" --configuration Release --no-build \
+              --logger "trx;LogFileName=$proyecto.trx" --results-directory TestResults \
+              --collect:"XPlat Code Coverage" \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          done
+
+      - name: Enviar análisis a SonarCloud
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
