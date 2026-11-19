@@ -6,13 +6,15 @@
   "scripts": {
     "prepare": "husky",
     "lint": "dotnet format whitespace Nurtricenter.MS3.sln --verify-no-changes",
-    "lint:fix": "dotnet format whitespace Nurtricenter.MS3.sln"
+    "lint:fix": "dotnet format whitespace Nurtricenter.MS3.sln",
+    "ci:local": "bash scripts/ci-local.sh"
   },
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^16.1.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "pnpm": ">=9"
   }
 }
