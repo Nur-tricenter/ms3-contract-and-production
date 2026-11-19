@@ -3,6 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copio solo los .csproj y restauro primero (aprovecha cache de capas)
+COPY ["Directory.Build.props", "./"]
 COPY ["Nurtricenter.Api/Nurtricenter.MS3.Api.csproj", "Nurtricenter.Api/"]
 COPY ["Nurtricenter.MS3.Core/Nurtricenter.MS3.Core.csproj", "Nurtricenter.MS3.Core/"]
 COPY ["Nurtricenter.MS3.Application/Nurtricenter.MS3.Application.csproj", "Nurtricenter.MS3.Application/"]

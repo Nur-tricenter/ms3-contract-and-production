@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.36.0.15337">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Instala Husky + lint-staged (pnpm) la primera vez que se compila en local.
+       No corre en CI (GitHub Actions define CI=true) ni con HUSKY=0.
+       Si pnpm no está instalado, el build sigue: solo se avisa. -->
+  <Target Name="InstalarHooksGit"
+          BeforeTargets="Restore;CollectPackageReferences"
+          Condition="'$(MSBuildProjectName)' == 'Nurtricenter.MS3.Core' And '$(HUSKY)' != '0' And '$(CI)' != 'true' And Exists('$(MSBuildThisFileDirectory).git') And !Exists('$(MSBuildThisFileDirectory)node_modules/.bin')">
+    <Exec Command="pnpm install" WorkingDirectory="$(MSBuildThisFileDirectory)" ContinueOnError="true" StandardOutputImportance="Low" StandardErrorImportance="High" />
+  </Target>
+</Project>

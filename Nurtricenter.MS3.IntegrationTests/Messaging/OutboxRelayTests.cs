@@ -10,231 +10,231 @@ namespace Nurtricenter.MS3.IntegrationTests.Messaging;
 
 public sealed class OutboxRelayTests : IDisposable
 {
-    private readonly BaseDeDatosEnMemoria _baseDeDatos = new();
-    private readonly BrokerEnMemoria _broker = new();
+	private readonly BaseDeDatosEnMemoria _baseDeDatos = new();
+	private readonly BrokerEnMemoria _broker = new();
 
-    public void Dispose() => _baseDeDatos.Dispose();
+	public void Dispose() => _baseDeDatos.Dispose();
 
-    private async Task<OutgoingIntegrationEvent> RegistrarEventoAsync(string tipo, string destino, object payload)
-    {
-        var evento = new OutgoingIntegrationEvent(tipo, destino, JsonSerializer.Serialize(payload));
-        await using var context = _baseDeDatos.CrearContexto();
-        context.OutgoingIntegrationEvents.Add(evento);
-        await context.SaveChangesAsync();
-        return evento;
-    }
+	private async Task<OutgoingIntegrationEvent> RegistrarEventoAsync(string tipo, string destino, object payload)
+	{
+		var evento = new OutgoingIntegrationEvent(tipo, destino, JsonSerializer.Serialize(payload));
+		await using var context = _baseDeDatos.CrearContexto();
+		context.OutgoingIntegrationEvents.Add(evento);
+		await context.SaveChangesAsync();
+		return evento;
+	}
 
-    private Task<OutgoingIntegrationEvent> RegistrarCreateScheduleAsync(Guid? contratoId = null, int? duracion = 30, string? inicio = "2026-10-25")
-        => RegistrarEventoAsync("CreateSchedule", "MS4", new
-        {
-            contractId = contratoId ?? Guid.NewGuid(),
-            PatientId = Guid.NewGuid(),
-            CatalogPlanId = Guid.NewGuid(),
-            InvoiceNumber = "inv-2026-0500",
-            TotalAmount = 550.00m,
-            durationDays = duracion,
-            startDate = inicio
-        });
+	private Task<OutgoingIntegrationEvent> RegistrarCreateScheduleAsync(Guid? contratoId = null, int? duracion = 30, string? inicio = "2026-10-25")
+		=> RegistrarEventoAsync("CreateSchedule", "MS4", new
+		{
+			contractId = contratoId ?? Guid.NewGuid(),
+			PatientId = Guid.NewGuid(),
+			CatalogPlanId = Guid.NewGuid(),
+			InvoiceNumber = "inv-2026-0500",
+			TotalAmount = 550.00m,
+			durationDays = duracion,
+			startDate = inicio
+		});
 
-    private async Task<int> EjecutarRelayAsync()
-    {
-        await using var context = _baseDeDatos.CrearContexto();
-        var relay = new OutboxRelay(context, _broker, NullLogger<OutboxRelay>.Instance);
-        return await relay.PublishPendingAsync();
-    }
+	private async Task<int> EjecutarRelayAsync()
+	{
+		await using var context = _baseDeDatos.CrearContexto();
+		var relay = new OutboxRelay(context, _broker, NullLogger<OutboxRelay>.Instance);
+		return await relay.PublishPendingAsync();
+	}
 
-    private async Task<OutgoingIntegrationEvent> LeerEventoAsync(Guid id)
-    {
-        await using var context = _baseDeDatos.CrearContexto();
-        return (await context.OutgoingIntegrationEvents.FindAsync(id))!;
-    }
+	private async Task<OutgoingIntegrationEvent> LeerEventoAsync(Guid id)
+	{
+		await using var context = _baseDeDatos.CrearContexto();
+		return (await context.OutgoingIntegrationEvents.FindAsync(id))!;
+	}
 
-    [Fact]
-    public async Task Relay_publishes_CreateSchedule_as_ContractActivated_on_its_exchange()
-    {
-        var contratoId = Guid.NewGuid();
-        var evento = await RegistrarCreateScheduleAsync(contratoId, 30, "2026-10-25");
+	[Fact]
+	public async Task Relay_publishes_CreateSchedule_as_ContractActivated_on_its_exchange()
+	{
+		var contratoId = Guid.NewGuid();
+		var evento = await RegistrarCreateScheduleAsync(contratoId, 30, "2026-10-25");
 
-        var entregados = await EjecutarRelayAsync();
+		var entregados = await EjecutarRelayAsync();
 
-        entregados.Should().Be(1);
-        var (mensaje, exchange, tipoDeclarado) = _broker.Publicados.Should().ContainSingle().Subject;
-        exchange.Should().Be("contract-activated");
-        tipoDeclarado.Should().Be(typeof(ContractActivated));
-        var activado = mensaje.Should().BeOfType<ContractActivated>().Subject;
-        activado.Id.Should().Be(evento.Id); // the outbox row id is the message id: a redelivery is a duplicate for MS4's inbox
-        activado.Source.Should().Be("contracting");
-        activado.ContractId.Should().Be(contratoId);
-        activado.DurationDays.Should().Be(30);
-        activado.StartDate.Should().Be(new DateOnly(2026, 10, 25));
-        var persistido = await LeerEventoAsync(evento.Id);
-        persistido.Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
-        persistido.PublishedAt.Should().NotBeNull();
-    }
+		entregados.Should().Be(1);
+		var (mensaje, exchange, tipoDeclarado) = _broker.Publicados.Should().ContainSingle().Subject;
+		exchange.Should().Be("contract-activated");
+		tipoDeclarado.Should().Be(typeof(ContractActivated));
+		var activado = mensaje.Should().BeOfType<ContractActivated>().Subject;
+		activado.Id.Should().Be(evento.Id); // the outbox row id is the message id: a redelivery is a duplicate for MS4's inbox
+		activado.Source.Should().Be("contracting");
+		activado.ContractId.Should().Be(contratoId);
+		activado.DurationDays.Should().Be(30);
+		activado.StartDate.Should().Be(new DateOnly(2026, 10, 25));
+		var persistido = await LeerEventoAsync(evento.Id);
+		persistido.Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
+		persistido.PublishedAt.Should().NotBeNull();
+	}
 
-    [Fact]
-    public async Task Relay_usa_el_dia_siguiente_a_la_fila_cuando_una_fila_antigua_no_trae_fecha_de_inicio()
-    {
-        var evento = await RegistrarCreateScheduleAsync(inicio: null);
+	[Fact]
+	public async Task Relay_usa_el_dia_siguiente_a_la_fila_cuando_una_fila_antigua_no_trae_fecha_de_inicio()
+	{
+		var evento = await RegistrarCreateScheduleAsync(inicio: null);
 
-        await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
 
-        _broker.Publicados.Should().ContainSingle()
-            .Which.Mensaje.Should().BeOfType<ContractActivated>()
-            .Which.StartDate.Should().Be(DateOnly.FromDateTime(evento.CreatedAt.AddDays(1)));
-    }
+		_broker.Publicados.Should().ContainSingle()
+			.Which.Mensaje.Should().BeOfType<ContractActivated>()
+			.Which.StartDate.Should().Be(DateOnly.FromDateTime(evento.CreatedAt.AddDays(1)));
+	}
 
-    [Fact]
-    public async Task Relay_marca_como_Rejected_un_CreateSchedule_sin_duracion_del_plan()
-    {
-        var evento = await RegistrarCreateScheduleAsync(duracion: null);
+	[Fact]
+	public async Task Relay_marca_como_Rejected_un_CreateSchedule_sin_duracion_del_plan()
+	{
+		var evento = await RegistrarCreateScheduleAsync(duracion: null);
 
-        await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
 
-        _broker.Publicados.Should().BeEmpty();
-        (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.RejectedStatus);
-    }
+		_broker.Publicados.Should().BeEmpty();
+		(await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.RejectedStatus);
+	}
 
-    [Fact]
-    public async Task Relay_leaves_CreateSchedule_pending_when_the_broker_fails()
-    {
-        var evento = await RegistrarCreateScheduleAsync();
-        _broker.FallarAlPublicar = true;
+	[Fact]
+	public async Task Relay_leaves_CreateSchedule_pending_when_the_broker_fails()
+	{
+		var evento = await RegistrarCreateScheduleAsync();
+		_broker.FallarAlPublicar = true;
 
-        var ejecutar = () => EjecutarRelayAsync();
+		var ejecutar = () => EjecutarRelayAsync();
 
-        await ejecutar.Should().ThrowAsync<InvalidOperationException>();
-        var persistido = await LeerEventoAsync(evento.Id);
-        persistido.Status.Should().Be(OutgoingIntegrationEvent.PendingStatus);
-        persistido.PublishedAt.Should().BeNull();
-    }
+		await ejecutar.Should().ThrowAsync<InvalidOperationException>();
+		var persistido = await LeerEventoAsync(evento.Id);
+		persistido.Status.Should().Be(OutgoingIntegrationEvent.PendingStatus);
+		persistido.PublishedAt.Should().BeNull();
+	}
 
-    [Fact]
-    public async Task Relay_publica_TransferToLogistics_como_PackageValidated_en_su_exchange()
-    {
-        var paqueteId = Guid.NewGuid();
-        var ordenId = Guid.NewGuid();
-        var liberadoEn = new DateTime(2026, 10, 23, 15, 30, 0, DateTimeKind.Utc);
-        var evento = await RegistrarEventoAsync("TransferToLogistics", "MS5", new
-        {
-            packageId = paqueteId,
-            PatientId = Guid.NewGuid(),
-            patientName = "Juan Perez",
-            patientPhone = "+591 700 22222",
-            ProductionOrderId = ordenId,
-            CatalogPlanId = Guid.NewGuid(),
-            status = "validatedAndReleased",
-            releasedAt = liberadoEn,
-            deliveryDate = new DateOnly(2026, 10, 24),
-            deliveryAddress = "Av. Las Flores #123",
-            trackingNumber = "NTR-ABCD1234-20261023",
-            latitude = -12.0464,
-            longitude = -77.0428,
-            deliveryDayId = 42
-        });
+	[Fact]
+	public async Task Relay_publica_TransferToLogistics_como_PackageValidated_en_su_exchange()
+	{
+		var paqueteId = Guid.NewGuid();
+		var ordenId = Guid.NewGuid();
+		var liberadoEn = new DateTime(2026, 10, 23, 15, 30, 0, DateTimeKind.Utc);
+		var evento = await RegistrarEventoAsync("TransferToLogistics", "MS5", new
+		{
+			packageId = paqueteId,
+			PatientId = Guid.NewGuid(),
+			patientName = "Juan Perez",
+			patientPhone = "+591 700 22222",
+			ProductionOrderId = ordenId,
+			CatalogPlanId = Guid.NewGuid(),
+			status = "validatedAndReleased",
+			releasedAt = liberadoEn,
+			deliveryDate = new DateOnly(2026, 10, 24),
+			deliveryAddress = "Av. Las Flores #123",
+			trackingNumber = "NTR-ABCD1234-20261023",
+			latitude = -12.0464,
+			longitude = -77.0428,
+			deliveryDayId = 42
+		});
 
-        await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
 
-        var (mensaje, exchange, tipoDeclarado) = _broker.Publicados.Should().ContainSingle().Subject;
-        exchange.Should().Be("package-validated");
-        tipoDeclarado.Should().Be(typeof(PackageValidated));
-        var paquete = mensaje.Should().BeOfType<PackageValidated>().Subject;
-        paquete.Id.Should().Be(evento.Id);
-        paquete.Source.Should().Be("contracting");
-        paquete.PackageId.Should().Be(paqueteId);
-        paquete.PatientName.Should().Be("Juan Perez");
-        paquete.ProductionOrderId.Should().Be(ordenId);
-        paquete.ReleasedAt.Should().Be(liberadoEn);
-        paquete.DeliveryDate.Should().Be(new DateOnly(2026, 10, 24));
-        paquete.DeliveryAddress.Should().Be("Av. Las Flores #123");
-        paquete.TrackingNumber.Should().Be("NTR-ABCD1234-20261023");
-        paquete.Latitude.Should().Be(-12.0464);
-        paquete.Longitude.Should().Be(-77.0428);
-        paquete.DeliveryDayId.Should().Be(42);
-        paquete.PatientPhone.Should().Be("+591 700 22222");
-        (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
-    }
+		var (mensaje, exchange, tipoDeclarado) = _broker.Publicados.Should().ContainSingle().Subject;
+		exchange.Should().Be("package-validated");
+		tipoDeclarado.Should().Be(typeof(PackageValidated));
+		var paquete = mensaje.Should().BeOfType<PackageValidated>().Subject;
+		paquete.Id.Should().Be(evento.Id);
+		paquete.Source.Should().Be("contracting");
+		paquete.PackageId.Should().Be(paqueteId);
+		paquete.PatientName.Should().Be("Juan Perez");
+		paquete.ProductionOrderId.Should().Be(ordenId);
+		paquete.ReleasedAt.Should().Be(liberadoEn);
+		paquete.DeliveryDate.Should().Be(new DateOnly(2026, 10, 24));
+		paquete.DeliveryAddress.Should().Be("Av. Las Flores #123");
+		paquete.TrackingNumber.Should().Be("NTR-ABCD1234-20261023");
+		paquete.Latitude.Should().Be(-12.0464);
+		paquete.Longitude.Should().Be(-77.0428);
+		paquete.DeliveryDayId.Should().Be(42);
+		paquete.PatientPhone.Should().Be("+591 700 22222");
+		(await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
+	}
 
-    [Fact]
-    public async Task Relay_publica_PackageValidated_de_filas_antiguas_sin_direccion_ni_coordenadas()
-    {
-        await RegistrarEventoAsync("TransferToLogistics", "MS5", new
-        {
-            packageId = Guid.NewGuid(),
-            PatientId = Guid.NewGuid(),
-            ProductionOrderId = Guid.NewGuid(),
-            CatalogPlanId = Guid.NewGuid(),
-            status = "validatedAndReleased",
-            releasedAt = DateTime.UtcNow
-        });
+	[Fact]
+	public async Task Relay_publica_PackageValidated_de_filas_antiguas_sin_direccion_ni_coordenadas()
+	{
+		await RegistrarEventoAsync("TransferToLogistics", "MS5", new
+		{
+			packageId = Guid.NewGuid(),
+			PatientId = Guid.NewGuid(),
+			ProductionOrderId = Guid.NewGuid(),
+			CatalogPlanId = Guid.NewGuid(),
+			status = "validatedAndReleased",
+			releasedAt = DateTime.UtcNow
+		});
 
-        await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
 
-        var paquete = _broker.Publicados.Should().ContainSingle().Subject.Item1.Should().BeOfType<PackageValidated>().Subject;
-        paquete.DeliveryAddress.Should().BeEmpty();
-        paquete.TrackingNumber.Should().BeEmpty();
-        paquete.Latitude.Should().BeNull();
-        paquete.Longitude.Should().BeNull();
-        paquete.DeliveryDayId.Should().BeNull();
-    }
+		var paquete = _broker.Publicados.Should().ContainSingle().Subject.Item1.Should().BeOfType<PackageValidated>().Subject;
+		paquete.DeliveryAddress.Should().BeEmpty();
+		paquete.TrackingNumber.Should().BeEmpty();
+		paquete.Latitude.Should().BeNull();
+		paquete.Longitude.Should().BeNull();
+		paquete.DeliveryDayId.Should().BeNull();
+	}
 
-    [Fact]
-    public async Task Relay_no_vuelve_a_entregar_un_evento_ya_entregado()
-    {
-        await RegistrarCreateScheduleAsync();
+	[Fact]
+	public async Task Relay_no_vuelve_a_entregar_un_evento_ya_entregado()
+	{
+		await RegistrarCreateScheduleAsync();
 
-        await EjecutarRelayAsync();
-        var segundaPasada = await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
+		var segundaPasada = await EjecutarRelayAsync();
 
-        segundaPasada.Should().Be(0);
-        _broker.Publicados.Should().ContainSingle();
-    }
+		segundaPasada.Should().Be(0);
+		_broker.Publicados.Should().ContainSingle();
+	}
 
-    [Fact]
-    public async Task Relay_marca_como_Unroutable_un_tipo_de_evento_sin_destino()
-    {
-        var evento = await RegistrarEventoAsync("EventoDesconocido", "MS9", new { id = Guid.NewGuid() });
+	[Fact]
+	public async Task Relay_marca_como_Unroutable_un_tipo_de_evento_sin_destino()
+	{
+		var evento = await RegistrarEventoAsync("EventoDesconocido", "MS9", new { id = Guid.NewGuid() });
 
-        await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
 
-        _broker.Publicados.Should().BeEmpty();
-        (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
-    }
+		_broker.Publicados.Should().BeEmpty();
+		(await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
+	}
 
-    [Fact]
-    public async Task Relay_marca_como_Unroutable_un_payload_malformado_y_sigue_con_el_resto()
-    {
-        var malformado = new OutgoingIntegrationEvent("CreateSchedule", "MS4", "{\"contractId\":\"no-es-un-guid\"}");
-        await using (var context = _baseDeDatos.CrearContexto())
-        {
-            context.OutgoingIntegrationEvents.Add(malformado);
-            await context.SaveChangesAsync();
-        }
-        var valido = await RegistrarCreateScheduleAsync();
+	[Fact]
+	public async Task Relay_marca_como_Unroutable_un_payload_malformado_y_sigue_con_el_resto()
+	{
+		var malformado = new OutgoingIntegrationEvent("CreateSchedule", "MS4", "{\"contractId\":\"no-es-un-guid\"}");
+		await using (var context = _baseDeDatos.CrearContexto())
+		{
+			context.OutgoingIntegrationEvents.Add(malformado);
+			await context.SaveChangesAsync();
+		}
+		var valido = await RegistrarCreateScheduleAsync();
 
-        await EjecutarRelayAsync();
+		await EjecutarRelayAsync();
 
-        (await LeerEventoAsync(malformado.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
-        (await LeerEventoAsync(valido.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
-        _broker.Publicados.Should().ContainSingle();
-    }
+		(await LeerEventoAsync(malformado.Id)).Status.Should().Be(OutgoingIntegrationEvent.UnroutableStatus);
+		(await LeerEventoAsync(valido.Id)).Status.Should().Be(OutgoingIntegrationEvent.PublishedStatus);
+		_broker.Publicados.Should().ContainSingle();
+	}
 
-    [Fact]
-    public async Task Relay_deja_PackageValidated_pendiente_cuando_el_broker_falla()
-    {
-        var evento = await RegistrarEventoAsync("TransferToLogistics", "MS5", new
-        {
-            packageId = Guid.NewGuid(),
-            PatientId = Guid.NewGuid(),
-            ProductionOrderId = Guid.NewGuid(),
-            CatalogPlanId = Guid.NewGuid(),
-            releasedAt = DateTime.UtcNow
-        });
-        _broker.FallarAlPublicar = true;
+	[Fact]
+	public async Task Relay_deja_PackageValidated_pendiente_cuando_el_broker_falla()
+	{
+		var evento = await RegistrarEventoAsync("TransferToLogistics", "MS5", new
+		{
+			packageId = Guid.NewGuid(),
+			PatientId = Guid.NewGuid(),
+			ProductionOrderId = Guid.NewGuid(),
+			CatalogPlanId = Guid.NewGuid(),
+			releasedAt = DateTime.UtcNow
+		});
+		_broker.FallarAlPublicar = true;
 
-        var ejecutar = () => EjecutarRelayAsync();
+		var ejecutar = () => EjecutarRelayAsync();
 
-        await ejecutar.Should().ThrowAsync<InvalidOperationException>();
-        (await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PendingStatus);
-    }
+		await ejecutar.Should().ThrowAsync<InvalidOperationException>();
+		(await LeerEventoAsync(evento.Id)).Status.Should().Be(OutgoingIntegrationEvent.PendingStatus);
+	}
 }

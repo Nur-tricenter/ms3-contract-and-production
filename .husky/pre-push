@@ -1,0 +1,2 @@
+dotnet build Nurtricenter.MS3.sln -nologo -v q
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --no-build -nologo

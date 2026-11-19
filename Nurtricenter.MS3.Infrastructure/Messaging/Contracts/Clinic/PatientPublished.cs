@@ -8,11 +8,11 @@ namespace Nurtricenter.MS3.Infrastructure.Messaging.Contracts.Clinic;
 /// </summary>
 public record PatientPublished : IntegrationMessage
 {
-    public string EventType => "Patient.Published";
+	public string EventType => "Patient.Published";
 
-    public Guid PatientId { get; init; }
-    public string DocumentNumber { get; init; } = string.Empty;
-    public string FirstName { get; init; } = string.Empty;
-    public string LastName { get; init; } = string.Empty;
-    public string? Phone { get; init; }
+	public Guid PatientId { get; init; }
+	public string DocumentNumber { get; init; } = string.Empty;
+	public string FirstName { get; init; } = string.Empty;
+	public string LastName { get; init; } = string.Empty;
+	public string? Phone { get; init; }
 }

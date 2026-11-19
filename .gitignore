@@ -60,5 +60,10 @@ TestResult.xml
 nunit-*.xml
 
 #doc
-CLAUDE.md
 HAPPY_PATH.md
+# Node (Husky + lint-staged)
+node_modules/
+
+# SonarCloud / cobertura local
+.sonarqube/
+**/TestResults/

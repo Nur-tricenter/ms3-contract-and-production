@@ -17,60 +17,60 @@ namespace Nurtricenter.MS3.Infrastructure.Messaging;
 /// </remarks>
 public sealed class ProjectedDataSimulationService : ISimulationService
 {
-    private const string ActiveStatus = "active";
+	private const string ActiveStatus = "active";
 
-    private readonly ISimulationService _inner;
-    private readonly ApplicationDbContext _context;
+	private readonly ISimulationService _inner;
+	private readonly ApplicationDbContext _context;
 
-    public ProjectedDataSimulationService(ISimulationService inner, ApplicationDbContext context)
-    {
-        _inner = inner;
-        _context = context;
-    }
+	public ProjectedDataSimulationService(ISimulationService inner, ApplicationDbContext context)
+	{
+		_inner = inner;
+		_context = context;
+	}
 
-    public SimPatient? GetPatient(Guid patientId)
-    {
-        var patient = _context.ClinicPatients.Find(patientId);
+	public SimPatient? GetPatient(Guid patientId)
+	{
+		var patient = _context.ClinicPatients.Find(patientId);
 
-        return patient is null
-            ? null
-            : new SimPatient(patient.PatientId, patient.FullName, ActiveStatus, patient.Phone);
-    }
+		return patient is null
+			? null
+			: new SimPatient(patient.PatientId, patient.FullName, ActiveStatus, patient.Phone);
+	}
 
-    public List<SimActiveCalendar> GetActiveCalendars(DateTime date)
-    {
-        var deliveryDate = DateOnly.FromDateTime(date);
+	public List<SimActiveCalendar> GetActiveCalendars(DateTime date)
+	{
+		var deliveryDate = DateOnly.FromDateTime(date);
 
-        return _context.ScheduledDeliveries
-            .Where(d => d.DeliveryDate == deliveryDate)
-            .OrderBy(d => d.DeliveryDayId)
-            .AsEnumerable()
-            .Select(d => new SimActiveCalendar(
-                PackIdToGuid(d.DeliveryDayId),
-                d.PatientId,
-                d.PlanId,
-                d.Address,
-                d.Latitude ?? 0,
-                d.Longitude ?? 0,
-                d.Hour ?? string.Empty,
-                ProductionOrderReadyConsumer.ReadMenu(d.MenuJson)
-                    .OrderBy(item => item.MealTimeOrder)
-                    .Select(item => new SimMenuItem(item.MealTime, item.RecipeId, item.RecipeName, item.Rations))
-                    .ToList(),
-                d.DeliveryDayId))
-            .ToList();
-    }
+		return _context.ScheduledDeliveries
+			.Where(d => d.DeliveryDate == deliveryDate)
+			.OrderBy(d => d.DeliveryDayId)
+			.AsEnumerable()
+			.Select(d => new SimActiveCalendar(
+				PackIdToGuid(d.DeliveryDayId),
+				d.PatientId,
+				d.PlanId,
+				d.Address,
+				d.Latitude ?? 0,
+				d.Longitude ?? 0,
+				d.Hour ?? string.Empty,
+				ProductionOrderReadyConsumer.ReadMenu(d.MenuJson)
+					.OrderBy(item => item.MealTimeOrder)
+					.Select(item => new SimMenuItem(item.MealTime, item.RecipeId, item.RecipeName, item.Rations))
+					.ToList(),
+				d.DeliveryDayId))
+			.ToList();
+	}
 
-    /// <summary>The package id MS3 uses for an MS4 delivery day: the day id packed into a Guid.</summary>
-    public static Guid PackIdToGuid(int packId)
-        => new(packId, 0, 0, new byte[8]);
+	/// <summary>The package id MS3 uses for an MS4 delivery day: the day id packed into a Guid.</summary>
+	public static Guid PackIdToGuid(int packId)
+		=> new(packId, 0, 0, new byte[8]);
 
-    public SimPlan? GetPlan(Guid planId)
-        => _inner.GetPlan(planId);
+	public SimPlan? GetPlan(Guid planId)
+		=> _inner.GetPlan(planId);
 
-    public List<SimPlanStructure> GetPlanStructures(List<Guid> planIds)
-        => _inner.GetPlanStructures(planIds);
+	public List<SimPlanStructure> GetPlanStructures(List<Guid> planIds)
+		=> _inner.GetPlanStructures(planIds);
 
-    public string? GetRecipeName(Guid recipeId)
-        => _inner.GetRecipeName(recipeId);
+	public string? GetRecipeName(Guid recipeId)
+		=> _inner.GetRecipeName(recipeId);
 }

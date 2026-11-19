@@ -9,31 +9,31 @@ namespace Nurtricenter.MS3.Application.Handlers;
 
 public sealed class GetInvoiceQueryHandler : IRequestHandler<GetInvoiceQuery, Result<InvoiceResponse>>
 {
-    private readonly IContractRepository _contractRepository;
-    private readonly ISimulationService _sim;
+	private readonly IContractRepository _contractRepository;
+	private readonly ISimulationService _sim;
 
-    public GetInvoiceQueryHandler(IContractRepository contractRepository, ISimulationService sim)
-    {
-        _contractRepository = contractRepository;
-        _sim = sim;
-    }
+	public GetInvoiceQueryHandler(IContractRepository contractRepository, ISimulationService sim)
+	{
+		_contractRepository = contractRepository;
+		_sim = sim;
+	}
 
-    public async Task<Result<InvoiceResponse>> Handle(GetInvoiceQuery request, CancellationToken cancellationToken)
-    {
-        var contract = await _contractRepository.GetByInvoiceNumberAsync(request.InvoiceNumber, cancellationToken);
-        if (contract?.Invoice is null)
-            return Result.Failure<InvoiceResponse>(
-                new Error("NOT_FOUND", $"Invoice '{request.InvoiceNumber}' not found.", ErrorType.NotFound));
+	public async Task<Result<InvoiceResponse>> Handle(GetInvoiceQuery request, CancellationToken cancellationToken)
+	{
+		var contract = await _contractRepository.GetByInvoiceNumberAsync(request.InvoiceNumber, cancellationToken);
+		if (contract?.Invoice is null)
+			return Result.Failure<InvoiceResponse>(
+				new Error("NOT_FOUND", $"Invoice '{request.InvoiceNumber}' not found.", ErrorType.NotFound));
 
-        var invoice = contract.Invoice;
-        var plan = _sim.GetPlan(contract.CatalogPlanId);
+		var invoice = contract.Invoice;
+		var plan = _sim.GetPlan(contract.CatalogPlanId);
 
-        return Result<InvoiceResponse>.Success(new InvoiceResponse(
-            invoice.Id,
-            contract.PatientId,
-            plan?.PlanName ?? "Unknown Plan",
-            invoice.TotalAmount,
-            contract.CreatedAt,
-            invoice.IsPaid));
-    }
+		return Result<InvoiceResponse>.Success(new InvoiceResponse(
+			invoice.Id,
+			contract.PatientId,
+			plan?.PlanName ?? "Unknown Plan",
+			invoice.TotalAmount,
+			contract.CreatedAt,
+			invoice.IsPaid));
+	}
 }

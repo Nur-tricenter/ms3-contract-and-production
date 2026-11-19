@@ -9,29 +9,29 @@ namespace Nurtricenter.MS3.Application.Handlers;
 
 public sealed class ConsolidateDailyOrderCommandHandler : IRequestHandler<ConsolidateDailyOrderCommand, Result<DailyProductionOrder>>
 {
-    private readonly IDailyProductionOrderRepository _dailyProductionOrderRepository;
-    private readonly IUnitOfWork _unitOfWork;
+	private readonly IDailyProductionOrderRepository _dailyProductionOrderRepository;
+	private readonly IUnitOfWork _unitOfWork;
 
-    public ConsolidateDailyOrderCommandHandler(
-        IDailyProductionOrderRepository dailyProductionOrderRepository,
-        IUnitOfWork unitOfWork)
-    {
-        _dailyProductionOrderRepository = dailyProductionOrderRepository;
-        _unitOfWork = unitOfWork;
-    }
+	public ConsolidateDailyOrderCommandHandler(
+		IDailyProductionOrderRepository dailyProductionOrderRepository,
+		IUnitOfWork unitOfWork)
+	{
+		_dailyProductionOrderRepository = dailyProductionOrderRepository;
+		_unitOfWork = unitOfWork;
+	}
 
-    public async Task<Result<DailyProductionOrder>> Handle(ConsolidateDailyOrderCommand request, CancellationToken cancellationToken)
-    {
-        var existing = await _dailyProductionOrderRepository.GetByProductionDateAsync(request.ProductionDate, cancellationToken);
-        if (existing is not null)
-            return Result.Failure<DailyProductionOrder>(
-                new Error("DUPLICATE_ORDER", $"A production order already exists for {request.ProductionDate:yyyy-MM-dd}.", ErrorType.Conflict));
+	public async Task<Result<DailyProductionOrder>> Handle(ConsolidateDailyOrderCommand request, CancellationToken cancellationToken)
+	{
+		var existing = await _dailyProductionOrderRepository.GetByProductionDateAsync(request.ProductionDate, cancellationToken);
+		if (existing is not null)
+			return Result.Failure<DailyProductionOrder>(
+				new Error("DUPLICATE_ORDER", $"A production order already exists for {request.ProductionDate:yyyy-MM-dd}.", ErrorType.Conflict));
 
-        var order = DailyProductionOrder.ConsolidateOrder(request.ProductionDate, request.Items);
+		var order = DailyProductionOrder.ConsolidateOrder(request.ProductionDate, request.Items);
 
-        await _dailyProductionOrderRepository.AddAsync(order);
-        await _unitOfWork.CommitAsync(cancellationToken);
+		await _dailyProductionOrderRepository.AddAsync(order);
+		await _unitOfWork.CommitAsync(cancellationToken);
 
-        return Result<DailyProductionOrder>.Success(order);
-    }
+		return Result<DailyProductionOrder>.Success(order);
+	}
 }

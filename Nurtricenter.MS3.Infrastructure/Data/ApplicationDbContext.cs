@@ -14,28 +14,28 @@ namespace Nurtricenter.MS3.Infrastructure.Data;
 /// </summary>
 public sealed class ApplicationDbContext : DbContext
 {
-    public DbSet<Contract> Contracts => Set<Contract>();
-    public DbSet<ControlCharge> ControlCharges => Set<ControlCharge>();
-    public DbSet<DailyProductionOrder> DailyProductionOrders => Set<DailyProductionOrder>();
-    public DbSet<Package> Packages => Set<Package>();
-    public DbSet<OutgoingIntegrationEvent> OutgoingIntegrationEvents => Set<OutgoingIntegrationEvent>();
-    public DbSet<CatalogPlan> CatalogPlans => Set<CatalogPlan>();
-    public DbSet<CatalogRecipe> CatalogRecipes => Set<CatalogRecipe>();
-    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
-    public DbSet<ScheduledDelivery> ScheduledDeliveries => Set<ScheduledDelivery>();
-    public DbSet<ClinicPatient> ClinicPatients => Set<ClinicPatient>();
+	public DbSet<Contract> Contracts => Set<Contract>();
+	public DbSet<ControlCharge> ControlCharges => Set<ControlCharge>();
+	public DbSet<DailyProductionOrder> DailyProductionOrders => Set<DailyProductionOrder>();
+	public DbSet<Package> Packages => Set<Package>();
+	public DbSet<OutgoingIntegrationEvent> OutgoingIntegrationEvents => Set<OutgoingIntegrationEvent>();
+	public DbSet<CatalogPlan> CatalogPlans => Set<CatalogPlan>();
+	public DbSet<CatalogRecipe> CatalogRecipes => Set<CatalogRecipe>();
+	public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+	public DbSet<ScheduledDelivery> ScheduledDeliveries => Set<ScheduledDelivery>();
+	public DbSet<ClinicPatient> ClinicPatients => Set<ClinicPatient>();
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
+	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+		: base(options)
+	{
+	}
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
+	protected override void OnModelCreating(ModelBuilder modelBuilder)
+	{
+		base.OnModelCreating(modelBuilder);
 
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+		modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-        modelBuilder.Ignore<DomainEvent>();
-    }
+		modelBuilder.Ignore<DomainEvent>();
+	}
 }

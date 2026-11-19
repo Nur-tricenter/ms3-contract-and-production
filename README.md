@@ -229,3 +229,57 @@ ms3-contract-and-production/
 └── docs/
     └── HAPPY_PATH.md                 # Guía de flujo happy path
 ```
+
+---
+
+## 3. Calidad de código
+
+| Pieza | Qué hace |
+|---|---|
+| SonarQube for IDE (SonarLint) | Extensión de Visual Studio que marca problemas mientras se edita. Se instala desde *Extensiones → Administrar extensiones*. |
+| `SonarAnalyzer.CSharp` | Las mismas reglas de Sonar, pero en cada `dotnet build` (en `Directory.Build.props`). Salen como advertencias, no como errores. |
+| `.editorconfig` | Estilo del repositorio. Los `.cs` se indentan con **tabs**; YAML, JSON, `.csproj` y Markdown siguen con espacios porque YAML no admite tabs. `EnforceCodeStyleInBuild` hace que el build reporte `IDE0055` si hay espacios. |
+| Husky + lint-staged | Hooks de git versionados en `.husky/` (paquetes de pnpm en `package.json`). Se instalan solos en el primer `dotnet build` o a mano con `pnpm install`. Requiere Node 20 o superior y pnpm 9 o superior. |
+
+Hooks:
+
+- **pre-commit**: lint-staged toma solo los `.cs` en stage y corre `dotnet format whitespace --verify-no-changes` sobre ellos (`lint-staged.config.js`). Si un archivo tiene espacios, el commit se rechaza; se corrige con `pnpm lint:fix` (o `dotnet format whitespace Nurtricenter.MS3.sln`).
+- **pre-push**: `dotnet build` de la solución y las pruebas unitarias (`Nurtricenter.MS3.Tests`). Las de integración y Pact quedan fuera para que el push no tarde.
+
+Para saltarlos en un caso puntual: `HUSKY=0 git push` (o `git commit --no-verify`).
+
+La conversión de espacios a tabs está en un solo commit, registrado en `.git-blame-ignore-revs`. Para que `git blame` lo ignore: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+
+## 4. Continuous Integration
+
+El pipeline está en [.github/workflows/ci.yml](.github/workflows/ci.yml) y corre en cada push (cualquier rama) y en cada pull request hacia `main`.
+
+| Job | Pasos |
+|---|---|
+| **Build, lint y pruebas** | `dotnet restore` → `dotnet format whitespace --verify-no-changes` → `dotnet build -c Release` → pruebas unitarias → integración → Pact consumer → Pact provider. Los `.trx` quedan como artefacto `test-results`. |
+| **SonarCloud** | `dotnet sonarscanner begin` → `dotnet build` → pruebas unitarias e integración con cobertura OpenCover → `dotnet sonarscanner end`. |
+
+Comandos equivalentes en local (o todo junto con `pnpm ci:local`):
+
+```bash
+dotnet restore Nurtricenter.MS3.sln
+dotnet format whitespace Nurtricenter.MS3.sln --verify-no-changes
+dotnet build Nurtricenter.MS3.sln -c Release --no-restore
+dotnet test Nurtricenter.MS3.sln -c Release --no-build
+```
+
+### Configuración de SonarCloud (una sola vez)
+
+1. En [sonarcloud.io](https://sonarcloud.io) entrar con GitHub, importar la organización `Nur-tricenter` y analizar el repositorio `ms3-contract-and-production`.
+2. En el proyecto: *Administration → Analysis Method* → desactivar **Automatic Analysis** (el análisis lo hace el pipeline; con los dos activos el job falla).
+3. *My Account → Security* → generar un token.
+4. En GitHub: *Settings → Secrets and variables → Actions* → secreto `SONAR_TOKEN_TEST` con ese token.
+5. Si la clave del proyecto o la organización no son las de por defecto (`Nur-tricenter_ms3-contract-and-production` / `nur-tricenter`), crear las variables `SONAR_PROJECT_KEY` y `SONAR_ORGANIZATION` en la misma pantalla (pestaña *Variables*).
+
+### Uso de IA
+
+La configuración se hizo con Claude Code. Las instrucciones que usa están versionadas:
+
+- [CLAUDE.md](CLAUDE.md): contexto del repositorio y reglas de trabajo.
+- [.claude/skills/continuous-integration/SKILL.md](.claude/skills/continuous-integration/SKILL.md): contrato de Husky, lint-staged, GitHub Actions y SonarCloud.
+- [.claude/agents/ci-verifier.md](.claude/agents/ci-verifier.md): agente que revisa una ejecución del pipeline o un cambio a la configuración de CI.

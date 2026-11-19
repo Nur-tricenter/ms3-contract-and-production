@@ -16,43 +16,43 @@ namespace Nurtricenter.MS3.Application.Handlers;
 /// nowhere else. NOT_FOUND only when there is neither an order nor a package.
 /// </remarks>
 public sealed class GetOrderPackagesQueryHandler
-    : IRequestHandler<GetOrderPackagesQuery, Result<ProductionOrderPackagesResponse>>
+	: IRequestHandler<GetOrderPackagesQuery, Result<ProductionOrderPackagesResponse>>
 {
-    private readonly IDailyProductionOrderRepository _orderRepository;
-    private readonly IPackageRepository _packageRepository;
+	private readonly IDailyProductionOrderRepository _orderRepository;
+	private readonly IPackageRepository _packageRepository;
 
-    public GetOrderPackagesQueryHandler(
-        IDailyProductionOrderRepository orderRepository,
-        IPackageRepository packageRepository)
-    {
-        _orderRepository = orderRepository;
-        _packageRepository = packageRepository;
-    }
+	public GetOrderPackagesQueryHandler(
+		IDailyProductionOrderRepository orderRepository,
+		IPackageRepository packageRepository)
+	{
+		_orderRepository = orderRepository;
+		_packageRepository = packageRepository;
+	}
 
-    public async Task<Result<ProductionOrderPackagesResponse>> Handle(
-        GetOrderPackagesQuery request, CancellationToken cancellationToken)
-    {
-        var order = await _orderRepository.GetByIdAsync(request.ProductionOrderId);
-        var packages = await _packageRepository.GetByProductionOrderIdAsync(request.ProductionOrderId, cancellationToken);
+	public async Task<Result<ProductionOrderPackagesResponse>> Handle(
+		GetOrderPackagesQuery request, CancellationToken cancellationToken)
+	{
+		var order = await _orderRepository.GetByIdAsync(request.ProductionOrderId);
+		var packages = await _packageRepository.GetByProductionOrderIdAsync(request.ProductionOrderId, cancellationToken);
 
-        if (order is null && packages.Count == 0)
-            return Result.Failure<ProductionOrderPackagesResponse>(
-                new Error("NOT_FOUND", $"Production order {request.ProductionOrderId} has no packages.", ErrorType.NotFound));
+		if (order is null && packages.Count == 0)
+			return Result.Failure<ProductionOrderPackagesResponse>(
+				new Error("NOT_FOUND", $"Production order {request.ProductionOrderId} has no packages.", ErrorType.NotFound));
 
-        var details = packages
-            .Select(p => new PackageDetail(
-                p.Id,
-                p.PatientId,
-                p.CatalogPlanId,
-                p.Status.ToString(),
-                p.Label?.TrackingNumber,
-                p.Label?.DeliveryAddress,
-                p.Validation?.ValidatedAt))
-            .OrderBy(p => p.PatientId)
-            .ThenBy(p => p.PackageId)
-            .ToList();
+		var details = packages
+			.Select(p => new PackageDetail(
+				p.Id,
+				p.PatientId,
+				p.CatalogPlanId,
+				p.Status.ToString(),
+				p.Label?.TrackingNumber,
+				p.Label?.DeliveryAddress,
+				p.Validation?.ValidatedAt))
+			.OrderBy(p => p.PatientId)
+			.ThenBy(p => p.PackageId)
+			.ToList();
 
-        return Result<ProductionOrderPackagesResponse>.Success(new ProductionOrderPackagesResponse(
-            request.ProductionOrderId, order?.ProductionDate, order?.Status.ToString(), details.Count, details));
-    }
+		return Result<ProductionOrderPackagesResponse>.Success(new ProductionOrderPackagesResponse(
+			request.ProductionOrderId, order?.ProductionDate, order?.Status.ToString(), details.Count, details));
+	}
 }
