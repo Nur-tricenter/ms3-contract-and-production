@@ -11,10 +11,12 @@
     </PackageReference>
   </ItemGroup>
 
-  <Target Name="InstalarHusky"
+  <!-- Instala Husky + lint-staged (npm) la primera vez que se compila en local.
+       No corre en CI (GitHub Actions define CI=true) ni con HUSKY=0.
+       Si Node no está instalado, el build sigue: solo se avisa. -->
+  <Target Name="InstalarHooksGit"
           BeforeTargets="Restore;CollectPackageReferences"
-          Condition="'$(MSBuildProjectName)' == 'Nurtricenter.MS3.Core' And '$(HUSKY)' != '0' And Exists('$(MSBuildThisFileDirectory).git')">
-    <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="Low" StandardErrorImportance="High" />
-    <Exec Command="dotnet husky install" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="Low" StandardErrorImportance="High" />
+          Condition="'$(MSBuildProjectName)' == 'Nurtricenter.MS3.Core' And '$(HUSKY)' != '0' And '$(CI)' != 'true' And Exists('$(MSBuildThisFileDirectory).git') And !Exists('$(MSBuildThisFileDirectory)node_modules/.bin')">
+    <Exec Command="npm install --no-audit --no-fund" WorkingDirectory="$(MSBuildThisFileDirectory)" ContinueOnError="true" StandardOutputImportance="Low" StandardErrorImportance="High" />
   </Target>
 </Project>

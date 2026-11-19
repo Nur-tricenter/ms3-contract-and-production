@@ -1,4 +1,2 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-dotnet husky run --group pre-push
+dotnet build Nurtricenter.MS3.sln -nologo -v q
+dotnet test Nurtricenter.MS3.Tests/Nurtricenter.MS3.Tests.csproj --no-build -nologo
