@@ -99,7 +99,7 @@ jobs:
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_TEST }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'nur-tricenter' }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'ms3-contract-and-production' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'Nur-tricenter_ms3-contract-and-production' }}
 
     steps:
       - name: Checkout (historial completo para el blame de Sonar)
